@@ -1,0 +1,47 @@
+import os
+import sys
+import requests
+import subprocess
+from zipfile import ZipFile
+
+if __name__ == "__main__":
+    
+    try:
+        terra_ver = subprocess.check_output("terraform --version", shell=True)
+    except subprocess.CalledProcessError:
+        print("Terraform command not found")
+        exit(1)
+    
+    if not terra_ver.startswith("Terraform"):
+        print("What the hell have you done?")
+        exit(1)
+
+    current_version = terra_ver.split("\n")[0].split(" ")[1][1:]
+    
+    if len(sys.argv) >= 2:
+        current_version = sys.argv[1]
+        
+    hashicorp_api = requests.get("https://checkpoint-api.hashicorp.com/v1/check/terraform")
+    latest_version = hashicorp_api.json()["current_version"]
+
+    if current_version == latest_version:
+        print("No upgrade needed. On latest version %s" % current_version)
+    else:
+        print("Renaming terraform to terraform_%s" % current_version)
+        os.rename("terraform", "terraform_"+current_version)
+        
+        zip_file = "terraform_latest.zip"
+
+        print("Downloading latest terraform, version %s" % latest_version)
+        url = hashicorp_api.json()["current_download_url"]+"terraform_"+latest_version+"_linux_amd64.zip"
+        r = requests.get(url, allow_redirects=True)
+        open(zip_file, "wb").write(r.content)
+
+        zip_ref = ZipFile(zip_file, "r")
+        zip_ref.extractall()
+        zip_ref.close()
+
+        os.remove(zip_file)
+
+        os.chmod('terraform', 509)
+        print("Terraform upgraded to %s" % latest_version)
