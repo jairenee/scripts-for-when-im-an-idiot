@@ -48,9 +48,11 @@ alias ~="cd ~"
 alias ..="cd .."
 alias ...="cd ../.."
 alias ....="cd ../../.."
+alias oops="cd $OLDPWD"
 alias ll="ls -la"
 alias pdev="pushd ~/Development"
 alias ldev="ls -la ~/Development"
+alias cstack="cd "$(dirs -l -0)" && dirs -c"
 
 alias sshjenk="ssh -i ~/.ssh/jenkins_master.pem centos@10.17.4.116"
 alias sshslaved="ssh -i ~/.ssh/btdev-ec2-keypair.pem centos@10.12.40.95"
@@ -100,6 +102,7 @@ alias gstore="git config credential.helper store"
 alias gcm="git pull && git add . && git commit && git push"
 alias gcp="gc -p"
 alias gp="git push"
+alias gloce="git config --local user.email 'jaime.wissner@gmail.com'"
 
 alias eeegp="git add . && git commit -m 'This is an emergency commit because of a building evacuation or other sudden major event.' && git push"
 alias ahelp="cat ~/docs/ahelp.txt"
@@ -112,6 +115,14 @@ alias ecrp='$(aws ecr get-login --no-include-email --region us-east-1 --profile 
 alias xclipb='xclip -selection clipboard'
 
 alias edex='nohup ~/Downloads/eDEX-UI.Linux.x86_64.AppImage &>/dev/null &'
+
+fixgitignore () {
+  git add . && git commit -m ".gitignore fix start"
+  git rm -r --cached .
+  git add . && git commit -m ".gitignore fix"
+  git push
+}
+
 
 effthis () {
   read -p "Are you sure you want to blow this up? " -n 1 -r
@@ -128,9 +139,9 @@ effthis () {
 }
 
 alias remove='/bin/rm -irv'
-
+alias yrm='yes | remove'
 function rm () {
-  echo "rm is disabled. Use remove instead."
+  echo -e "\e[31mrm is disabled. Use remove instead.\e[0m"
 }
 
 ugtf () {
@@ -154,20 +165,27 @@ gc () {
 }
 
 svars () {
-  pushd ~/Development/envvars && git pull
-  popd && cp ~/Development/envvars/tfvars/stage.auto.tfvars .
+  pdev
+  cd envvars && git pull
+  dev && cd terraform && git pull
+  popd
+  cp --verbose ~/Development/envvars/tfvars/stage.auto.tfvars .;
+  cp --verbose ~/Development/terraform/stage/stage-us-west-1/stage-provider.tf .;
 }
 
 pvars () {
-  pushd ~/Development/envvars && git pull
-  popd && cp ~/Development/envvars/tfvars/prod.auto.tfvars .  
+  pdev
+  cd envvars && git pull
+  dev && cd terraform && git pull
+  popd
+  cp --verbose ~/Development/envvars/tfvars/prod.auto.tfvars .;
+  cp --verbose ~/Development/terraform/prod/prod-us-east-1/prod-provider.tf .;
 }
 
 dvars () {
-  pushd ~/Development/terraform && git pull
+  pdev
+  cd terraform && git pull
   popd
   cp --verbose ~/Development/terraform/dev/dev-us-east-1/dev-provider.tf .;
   cp --verbose ~/Development/terraform/dev/dev-us-east-1/dev.auto.tfvars .; 
 }
-
-source ~/cppv.sh
