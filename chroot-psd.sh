@@ -5,7 +5,7 @@ for i in {45..40} {40..45} ; do echo -en "\e[38;5;${i}m##\e[0m" ; done ; echo
 echo -e "\e[92mWelcome to the Idiot Circumvention Program!"
 echo ~~~ By Jaime Renee Wissner
 echo It appears you\'ve damaged your system\'s drivers. This tool will chroot you into your installed system.
-echo -e "This program is intended to be run on a live USB or a seperate OS on the same system as your damaged system.\e[0m"
+echo -e "This program is intended to be run on a live USB or a separate OS on the same system as your damaged system.\e[0m"
 #echo -e "==========================================\e[0m"
 for i in {45..40} {40..45} ; do echo -en "\e[38;5;${i}m##\e[0m" ; done ; echo
 echo
