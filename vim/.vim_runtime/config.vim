@@ -1,11 +1,31 @@
-map <leader>nn :NERDTree<cr>
-map <leader>nc :NERDTreeClose<cr>
+map <silent> <leader>nn :NERDTree<cr>
+map <silent> <leader>nc :NERDTreeClose<cr>
+autocmd bufenter * if (winnr("$") == 1 && exists("b:NERDTree") && b:NERDTree.isTabTree()) | q | endif
 
-set number
+
+map <silent> <leader>jh :JSHint<cr>
+
+nnoremap <C-J> <C-W><C-J>
+nnoremap <C-K> <C-W><C-K>
+nnoremap <C-L> <C-W><C-L>
+nnoremap <C-H> <C-W><C-H>
+
+set rnu 
 highlight LineNr ctermfg=red
 
 set nofoldenable
 set spellfile=~/.vim/spell/en.utf-8.add
+
+set complete=.,w,b,u
+
+set lcs=eol:¬,tab:>-,trail:.,extends:»,precedes:«
+
+set ignorecase
+set smartcase
+
+if has('linebreak')
+  let &showbreak='⤷ '
+endif
 
 function! s:list_commits()
     let commits = systemlist('git log --oneline | head -n5')
@@ -49,3 +69,4 @@ let g:startify_custom_header = s:filter_header([
 
 let g:startify_use_env = 1
 
+color dracula

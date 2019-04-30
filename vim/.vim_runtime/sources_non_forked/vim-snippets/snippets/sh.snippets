@@ -1,16 +1,16 @@
 # Shebang. Executing bash via /usr/bin/env makes scripts more portable.
 snippet #!
-	#!/usr/bin/env sh
+	#!/bin/bash	
 
 snippet s#!
-	#!/usr/bin/env sh
+	#!/bin/bash
 	set -euo pipefail
 
 snippet safe
 	set -euo pipefail
 
 snippet bash
-	#!/usr/bin/env bash
+	#!/bin/bash
 
 snippet sbash
 	#!/usr/bin/env bash
@@ -46,13 +46,16 @@ snippet case
 			${0};;
 	esac
 snippet go
-	while getopts '${1:o}' ${2:opts}
+	while getopts ':${1:o}' ${2:opts}
 	do
 		case $$2 in
 		${3:o0})
-			${0:#staments};;
+			${0:#statements};;
+		\?|:)
+			echo "Usage: ${4:cmd} [-$1]"
 		esac
 	done
+	shift $((OPTIND -1))
 # Set SCRIPT_DIR variable to directory script is located.
 snippet sdir
 	SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
