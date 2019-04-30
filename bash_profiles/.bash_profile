@@ -7,6 +7,6 @@ fi
 
 # User specific environment and startup programs
 
-PATH=$PATH:$HOME/.local/bin:$HOME/bin:$HOME/bin/Hashicorp
+PATH=$PATH:$HOME/.local/bin:$HOME/bin:$HOME/bin/Hashicorp:$HOME/bin/node/bin
 export TFPROMOTE_DIFFTOOL=p4merge
 export PATH
