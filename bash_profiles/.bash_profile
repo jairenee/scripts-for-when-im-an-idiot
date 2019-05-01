@@ -1,12 +1,6 @@
 # .bash_profile
 
-# Get the aliases and functions
+# Login and non-login shells should be identical
 if [ -f ~/.bashrc ]; then
 	. ~/.bashrc
 fi
-
-# User specific environment and startup programs
-
-PATH=$PATH:$HOME/.local/bin:$HOME/bin:$HOME/bin/Hashicorp:$HOME/bin/node/bin
-export TFPROMOTE_DIFFTOOL=p4merge
-export PATH
