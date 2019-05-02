@@ -10,7 +10,7 @@ echo -e "This program is intended to be run on a live USB or a separate OS on th
 for i in {45..40} {40..45} ; do echo -en "\e[38;5;${i}m##\e[0m" ; done ; echo
 echo
 
-if [[ "$EUID" -ne 0 && $TESTING != true ]]
+if [[ "$EUID" -ne 0 ]]
   then echo "This tool needs to run as root."
   exit
 fi
@@ -28,7 +28,7 @@ if [[ -z $ROOTPART ]]; then
 	echo The root mount MUST be provided.
 	exit 1
 else
-	if [[ ! -e $ROOTPART ]]; then
+	if [[ ! -e /dev/$ROOTPART ]]; then
 		echo Device does not seem to exist. Is it in the list above?
 		exit 1
 	fi
@@ -46,7 +46,7 @@ if [[ -z $HOMEPART ]]; then
 		exit 1
 	fi
 else
-	if [[ ! -e $HOMEPART ]]; then
+	if [[ ! -e /dev/$HOMEPART ]]; then
 		echo Device does not seem to exist. Is it in the list above?
 		exit 1
 	fi
@@ -54,43 +54,33 @@ fi
 
 echo
 echo CONFIRMING! Your root mount is $ROOTPART, and your home mount is $HOMEPART?
-read -p "(PLEASE BE SURE ABOUT THIS. TYPE YES OR NO FULLY.) " CONFIRM
+read -p "Confirming root mount: $ROOTPART | home mount: $HOMEPART (y/N)" -n 1 -r CONFIRM
 
 case "$CONFIRM" in
-	[yY][eE][sS])
+	[yY])
 		CONFIRMED=true
 		echo Continuing...
 		;;
-	[nN][oO])
+	[nN])
 		echo Please rerun with the correct mount points.
 		exit 1
 		;;
 	* )
-		echo "I was very clear. I said say YES or NO. The capitalization doesn't even matter. Rerun the script to continue."
+		echo No input. Please rerun to continue.
 		exit 1
 		;;
 esac
 
-if [[ $CONFIRMED == true && $TESTING != true ]]; then
+if [[ $CONFIRMED == true ]]; then
 	cd /
-	mount $ROOTPART /mnt
-	[[ $SKIP_HOME_PART != true ]] && mount $HOMEPART /mnt/home
+	mount /dev/$ROOTPART /mnt
+	[[ $SKIP_HOME_PART != true ]] && mount /dev/$HOMEPART /mnt/home
 	cd /mnt
 	mount -t proc proc proc/
 	mount -t sysfs sys sys/
 	mount -o bind /dev dev/
 	chroot .
 	exit 0
-elif [[ $CONFIRMED == true && $TESTING == true ]]; then
-	echo "Confirmed!"
-	echo cd /
-	echo mount $ROOTPART /mnt
-	[[ $SKIP_HOME_PART != true ]] && echo mount $HOMEPART /mnt/home || echo "(home mount has been skipped)"
-	echo cd /mnt
-	echo mount -t proc proc proc/
-	echo mount -t sysfs sys sys/
-	echo mount -o bind /dev dev/
-	echo chroot .
-	exit 0
 fi
+
 set +x
