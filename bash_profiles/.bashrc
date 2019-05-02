@@ -1,10 +1,5 @@
-if [ -f /etc/bashrc ]; then
-    . /etc/bashrc
-fi
-
-if [ -f ~/.tfvarsrc ]; then
-    . ~/.tfvarsrc
-fi
+[[ -f /etc/bashrc ]] && . /etc/bashrc
+[[ -f ~/.tfvarsrc ]] && . ~/.tfvarsrc
 
 if [ -f ~/.bash_settings  ]; then
     . ~/.bash_settings
@@ -69,6 +64,9 @@ alias cstack="cd '$(dirs -l -0)' && dirs -c"
 alias mcde="mcd -v"
 alias rm='/bin/rm -irv'
 alias yrm='yes | rm'/
+alias cp="cp -i"
+alias df="df -h"
+alias free="free -m"
 
 alias gst="git status"
 alias gstore="git config credential.helper store"
@@ -86,6 +84,28 @@ mcd () {
     mkdir -p ${@: -1}
     cd ${@: -1}
     [[ $1 == "-v" ]] && e
+}
+
+ex ()
+{
+  if [ -f $1 ] ; then
+    case $1 in
+      *.tar.bz2)   tar xjf $1   ;;
+      *.tar.gz)    tar xzf $1   ;;
+      *.bz2)       bunzip2 $1   ;;
+      *.rar)       unrar x $1     ;;
+      *.gz)        gunzip $1    ;;
+      *.tar)       tar xf $1    ;;
+      *.tbz2)      tar xjf $1   ;;
+      *.tgz)       tar xzf $1   ;;
+      *.zip)       unzip $1     ;;
+      *.Z)         uncompress $1;;
+      *.7z)        7z x $1      ;;
+      *)           echo "'$1' cannot be extracted via ex()" ;;
+    esac
+  else
+    echo "'$1' is not a valid file"
+  fi
 }
 
 # Allows me to install to ~/usr/bin from rpms when I don't have sudo access.
