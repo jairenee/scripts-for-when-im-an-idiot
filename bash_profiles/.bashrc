@@ -76,13 +76,34 @@ alias gp="git push"
 alias gloce="git config --local user.email '$USER_EMAIL'"
 alias eeegp="git add . && git commit -m 'This is an emergency commit because of a building evacuation or other sudden major event.' && git push"
 
+testsh () {
+    touch $1
+    chmod +x $1
+    vim $1
+}
+
+ghrepos () {
+    unset user
+    for user in $@; do :; done
+    if [[ $user ]]; then
+        echo "Repos for user $user:"
+        repos=$(curl -s "https://api.github.com/users/$user/repos?page=1&per_page=100" |
+                    grep -e 'git_url*' |
+                    cut -d \" -f 4)
+        echo $repos[@]
+    else
+        echo "Missing username"
+    fi
+}
+
 ecrlog () {
     $(aws ecr get-login --no-include-email --region us-east-1 --profile $1)
 }
 
 mcd () {
-    mkdir -p ${@: -1}
-    cd ${@: -1}
+    mk_dir=${@: -1}
+    mkdir -p $mk_dir
+    cd $mk_dir
     [[ $1 == "-v" ]] && e
 }
 
