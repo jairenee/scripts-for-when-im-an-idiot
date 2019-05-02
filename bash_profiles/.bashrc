@@ -43,11 +43,14 @@ alias sbp="source ~/.bash_profile"
 alias evr="vim ~/.vimrc"
 alias evc="vim ~/.vim_runtime/config.vim"
 alias evpc="vim ~/.vim_runtime/vimrcs/plugins_config.vim"
+alias ei3="vim ~/.i3/config"
+alias eis="vim ~/.i3status.conf"
 
 alias c="clear"
 alias e="vim"
 
-alias xclipb='xclip -selection clipboard'
+alias setclip='xclip -selection clipboard'
+alias getclip='setclip -o'
 
 alias dev="cd $DEV_FOLDER"
 alias ldev="ll $DEV_FOLDER"
@@ -65,7 +68,7 @@ alias lg="ll | grep"
 alias cstack="cd '$(dirs -l -0)' && dirs -c"
 alias mcde="mcd -v"
 alias rm='/bin/rm -irv'
-alias yrm='yes | rm'
+alias yrm='yes | rm'/
 
 alias gst="git status"
 alias gstore="git config credential.helper store"
@@ -102,7 +105,7 @@ rpmi() {
             exit 1
         fi
     elif [ -z "$1" ]; then
-        RPM="$(xclipb -o)"
+        RPM="$(getclip)"
         if [[ $RPM == http*://*.rpm ]]; then
             pushd ~
             wget -O - $RPM | rpm2cpio - | cpio -idv
@@ -142,7 +145,7 @@ dockclean () {
 }
 
 gc () {
-    [[ $1 == -p ]] && url="$(xclipb -o)" || url=$1
+    [[ $1 == -p ]] && url="$(getclip)" || url=$1
     if [[ $url == https://*.git ]] || [[ $url == git@*.git ]]; then
         dev
         git clone $url
