@@ -1,0 +1,38 @@
+alias ti="cppv && terraform init"
+alias ta="terraform apply"
+alias tia="ti && ta"
+alias tpl="terraform plan"
+alias tfd="cd terraform/dev"
+alias tfdr="cd terraform/dev-rds"
+alias tfs="cd terraform/stage"
+alias tfp="cd terraform/prod"
+alias otfd="cd terraform && e && cd dev"
+alias otfs="cd terraform && e && cd stage"
+alias otfp="cd terraform && e && cd prod"
+alias proma="tfpromote -a"
+
+dvars () {
+  pdev
+  cd terraform && git pull
+  popd
+  cp --verbose $DEV_FOLDER/terraform/dev/dev-us-east-1/dev-provider.tf .;
+  cp --verbose $DEV_FOLDER/terraform/dev/dev-us-east-1/dev.auto.tfvars .; 
+}
+
+svars () {
+  pdev
+  cd envvars && git pull
+  dev && cd terraform && git pull
+  popd
+  cp --verbose $DEV_FOLDER/envvars/tfvars/stage.auto.tfvars .;
+  cp --verbose $DEV_FOLDER/terraform/stage/stage-us-west-1/stage-provider.tf .;
+}
+
+pvars () {
+  pdev
+  cd envvars && git pull
+  dev && cd terraform && git pull
+  popd
+  cp --verbose $DEV_FOLDER/envvars/tfvars/prod.auto.tfvars .;
+  cp --verbose $DEV_FOLDER/terraform/prod/prod-us-east-1/prod-provider.tf .;
+}

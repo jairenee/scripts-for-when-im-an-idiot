@@ -1,5 +1,4 @@
 [[ -f /etc/bashrc ]] && . /etc/bashrc
-[[ -f ~/.tfvarsrc ]] && . ~/.tfvarsrc
 
 if [ -f ~/.bash_settings  ]; then
     . ~/.bash_settings
@@ -18,6 +17,8 @@ export USER_EMAIL=${user_email}
 EOS
     . ~/.bash_settings
 fi
+
+[[ -f ~/.tfvarsrc ]] && . ~/.tfvarsrc
 
 # Git pull all in dev folder
 
@@ -43,6 +44,10 @@ alias eis="vim ~/.i3status.conf"
 
 alias c="clear"
 alias e="vim"
+
+alias chx="chmod +x"
+
+alias path='echo $PATH | tr -s ":" "\n"'
 
 alias setclip='xclip -selection clipboard'
 alias getclip='setclip -o'
@@ -224,16 +229,20 @@ fgi () {
 # uninstall by removing these lines or running `tabtab uninstall slss`
 [ -f $HOME/bin/node/lib/node_modules/serverless/node_modules/tabtab/.completions/slss.bash ] && . $HOME/bin/node/lib/node_modules/serverless/node_modules/tabtab/.completions/slss.bash
 
-LOCAL_PATH=$HOME/.local/bin:$HOME/usr/bin:$HOME/bin:
-HOMEBIN=($HOME/bin/*/)
-HOMEBIN_PATH=$(printf "%s:" "${HOMEBIN[@]}")
-HOMEBIN_BIN=($HOME/bin/**/bin)
-HOMEBIN_BIN_PATH=$(printf "%s:" "${HOMEBIN_BIN[@]}")
+function join_path { local IFS=: ; echo "$*"; }
 
-PATH="${LOCAL_PATH}${HOMEBIN_PATH}${HOMEBIN_BIN_PATH}${PATH}"
+LOCAL_PATH=( "$HOME/.local/bin" "$HOME/.cargo/bin" "$HOME/usr/bin" "$HOME/bin" $HOME/bin/*/ $HOME/bin/**/bin/ )
+
+for dir in "${LOCAL_PATH[@]}"; do
+    case ":$PATH:" in
+        *":$dir:"*) :;;
+        *) PATH="$dir:$PATH";;
+    esac
+done
+
+export PATH
 
 export TFPROMOTE_DIFFTOOL=$DIFFTOOL
-export PATH
 
 gpa () {
     # GPA_SIGINTHANDLE () {
