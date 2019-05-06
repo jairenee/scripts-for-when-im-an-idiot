@@ -1,3 +1,7 @@
+# shellcheck source=/dev/null
+
+stty -ixon
+
 [[ -f /etc/bashrc ]] && . /etc/bashrc
 
 if [ -f ~/.bash_settings  ]; then
@@ -6,14 +10,14 @@ else
     echo "====="
     echo "Initial settings options"
     echo "====="
-    read -p "What is your development folder (~/Development)? " -r dev_folder
-    read -p "What is your difftool (p4merge)? " -r diff_tool
-    read -p "What is your email address? " -r user_email
+    read -p "What is your development folder (~/Development)? " -r DEV_FOLDER
+    read -p "What is your difftool (p4merge)? " -r DIFF_TOOL
+    read -p "What is your email address? " -r USER_EMAIL
     echo "Your editor is vim. Fuck you."
     cat > ~/.bash_settings <<- EOS
-export DEV_FOLDER=${dev_folder:-~/Development}
-export DIFFTOOL=${diff_tool:-p4merge}
-export USER_EMAIL=${user_email}
+export DEV_FOLDER=${DEV_FOLDER:-~/Development}
+export DIFF_TOOL=${DIFF_TOOL:-p4merge}
+export USER_EMAIL=${USER_EMAIL}
 EOS
     . ~/.bash_settings
 fi
@@ -52,21 +56,21 @@ alias path='echo $PATH | tr -s ":" "\n"'
 alias setclip='xclip -selection clipboard'
 alias getclip='setclip -o'
 
-alias dev="cd $DEV_FOLDER"
-alias ldev="ll $DEV_FOLDER"
-alias pdev="pushd $DEV_FOLDER"
+alias dev='cd $DEV_FOLDER'
+alias ldev='ll $DEV_FOLDER'
+alias pdev='pushd $DEV_FOLDER'
 alias cvr="cd ~/.vim_runtime"
 alias ~="cd ~"
 alias ..="cd .."
 alias ...="cd ../.."
 alias ....="cd ../../.."
-# This NEEDS to be single quotes. Otherwise, the variable will interpolate on source instead of at runtime
+
 alias oops='cd $OLDPWD'
 alias ls="ls -a --color=auto"
 alias ll="ls -l"
 alias lg="ll | grep"
-alias cstack="cd '$(dirs -l -0)' && dirs -c"
-alias mcde="mcd -v"
+alias cstack='cd "$(dirs -l -0)" && dirs -c'
+alias mcde="mcd -o"
 alias rm='/bin/rm -irv'
 alias yrm='yes | rm'/
 alias cp="cp -i"
@@ -78,56 +82,58 @@ alias gstore="git config credential.helper store"
 alias gcm="git pull && git add . && git commit && git push"
 alias gcp="gc -p"
 alias gp="git push"
-alias gloce="git config --local user.email '$USER_EMAIL'"
+alias gloce='git config --local user.email "$USER_EMAIL"'
 alias eeegp="git add . && git commit -m 'This is an emergency commit because of a building evacuation or other sudden major event.' && git push"
 
 testsh () {
-    touch $1
-    chmod +x $1
-    vim $1
+    touch "$1"
+    chmod +x "$1"
+    vim "$1"
 }
 
 ghrepos () {
     unset user
-    for user in $@; do :; done
+    for user in "$@"; do :; done
     if [[ $user ]]; then
         echo "Repos for user $user:"
         repos=$(curl -s "https://api.github.com/users/$user/repos?page=1&per_page=100" |
-                    grep -e 'git_url*' |
+                    grep -e 'git_url.+' |
                     cut -d \" -f 4)
-        echo $repos[@]
+        echo "${repos[@]}"
     else
         echo "Missing username"
     fi
 }
 
 ecrlog () {
-    $(aws ecr get-login --no-include-email --region us-east-1 --profile $1)
+    # shellcheck disable=SC2091
+    $(aws ecr get-login --no-include-email --region us-east-1 --profile "$1")
 }
 
 mcd () {
-    mk_dir=${@: -1}
-    mkdir -p $mk_dir
-    cd $mk_dir
-    [[ $1 == "-v" ]] && e
+    args=( "$@" )
+    mk_dir="${args[-1]}"
+    mkdir -p "$mk_dir"
+    cd "$mk_dir" || return
+    [[ "$1" == "-o" ]] && e
 }
 
 ex ()
 {
-  if [ -f $1 ] ; then
-    case $1 in
-      *.tar.bz2)   tar xjf $1   ;;
-      *.tar.gz)    tar xzf $1   ;;
-      *.bz2)       bunzip2 $1   ;;
-      *.rar)       unrar x $1     ;;
-      *.gz)        gunzip $1    ;;
-      *.tar)       tar xf $1    ;;
-      *.tbz2)      tar xjf $1   ;;
-      *.tgz)       tar xzf $1   ;;
-      *.zip)       unzip $1     ;;
-      *.Z)         uncompress $1;;
-      *.7z)        7z x $1      ;;
-      *)           echo "'$1' cannot be extracted via ex()" ;;
+  if [ -f "$1" ] ; then
+    case "$1" in
+      *.tar.bz2)  tar xjf "$1"    ;;
+      *.tar.gz)   tar xzf "$1"    ;;
+      *.bz2)      bunzip2 "$1"    ;;
+      *.rar)      unrar x "$1"    ;;
+      *.gz)       gunzip "$1"     ;;
+      *.tar)      tar xf "$1"     ;;
+      *.tbz2)     tar xjf "$1"    ;;
+      *.tgz)      tar xzf "$1"    ;;
+      *.zip)      unzip "$1"      ;;
+      *.Z)        uncompress "$1" ;;
+      *.7z)       7z x "$1"       ;;
+      *)          echo "'$1' cannot be extracted via ex()" ;;
     esac
   else
     echo "'$1' is not a valid file"
@@ -138,24 +144,24 @@ ex ()
 # Takes files or urls. Don't pass anything and it'll read clipboard for urls.
 rpmi() {
     local TEMPBIN=~/tempbin
-    mkdir -p $TEMPBIN
+    mkdir -p "$TEMPBIN"
     if [ -s "$1" ]; then
-        if [[ $1 == *.rpm ]]; then
+        if [[ "$1" == *.rpm ]]; then
             # Move it to the temp bin, install in ~ and pop back
-            cp $1 $TEMPBIN
-            pushd ~
-            rpm2cpio $TEMPBIN/$1 | cpio -idv
-            popd
+            cp "$1" "$TEMPBIN"
+            pushd "$HOME" || return 1
+            rpm2cpio "$TEMPBIN/$1" | cpio -idv
+            popd || return 1
         else
             echo "Not an rpm file."
             exit 1
         fi
     elif [ -z "$1" ]; then
         RPM="$(getclip)"
-        if [[ $RPM == http*://*.rpm ]]; then
-            pushd ~
-            wget -O - $RPM | rpm2cpio - | cpio -idv
-            popd
+        if [[ "$RPM" == http*://*.rpm ]]; then
+            pushd "$HOME" || return 1
+            wget -O - "$RPM" | rpm2cpio - | cpio -idv
+            popd "$HOME" || return 1
         else
             echo "No valid rpm specified"
             exit 1
@@ -169,34 +175,42 @@ rpmi() {
 effthis () {
     read -p "Are you sure you want to blow this up? " -n 1 -r
     echo
-    if [[ $REPLY =~ ^[Yy]$ ]]; then
+    if [[ "$REPLY" =~ ^[Yy]$ ]]; then
         read -p "ARE YOU REALLY SURE? " -n 1 -r
         echo
-        if [[ $REPLY =~ ^[Yy]$ ]]; then
+        if [[ "$REPLY" =~ ^[Yy]$ ]]; then
             echo "One last confirmation for ENTIRELY DELETING THIS FOLDER ($(pwd)). THERE IS NO GOING BACK..."
             read -p "TYPE 'yes' EXACTLY. " -r
-            if [[ $REPLY == yes ]]; then
+            if [[ "$REPLY" == yes ]]; then
                 echo "Deleting $(pwd)"
                 dir=$(pwd)
                 cd ..
-                /bin/rm -rf $dir
+                /bin/rm -rf "$dir"
             fi
         fi
     fi
 }
 
 dockclean () {
-    docker rm $(docker ps -a -q)
-    docker rmi $(docker images | grep "^<none>" | awk '{print $3}')
+    docker ps -a -q | while IFS='' read -r stoppedContainer
+    do
+        docker rm "$stoppedContainer"
+    done
+
+    docker images | grep "^<none>" | awk '{print $3}' \
+        | while IFS='' read -r untaggedImage
+    do
+        docker rmi "$untaggedImage"
+    done
 }
 
 gc () {
-    [[ $1 == -p ]] && url="$(getclip)" || url=$1
-    if [[ $url == https://*.git ]] || [[ $url == git@*.git ]]; then
+    [[ "$1" == -p ]] && url="$(getclip)" || url=$1
+    if [[ "$url" == https://*.git ]] || [[ "$url" == git@*.git ]]; then
         dev
-        git clone $url
+        git clone "$url"
         folder=$(basename "$url" ".git")
-        cd $folder
+        cd "$folder" || return
         gstore
     else
         echo "Not a git link"
@@ -207,7 +221,9 @@ gc () {
 # Open remote in browser
 gopen() {
     REMOTE=${1:-"origin"}
-    xdg-open `git remote get-url $REMOTE | sed 's/git@/http:\/\//' | sed -r 's/(com|local):/\1\//'` | head -n1
+    xdg-open "$(git remote get-url "$REMOTE" | \
+        sed 's/git@/http:\/\//' | sed -r 's/(com|local):/\1\//')" | \
+        head -n1
 }
 
 # Fix Git Ignore
@@ -221,17 +237,17 @@ fgi () {
 
 # tabtab source for serverless package
 # uninstall by removing these lines or running `tabtab uninstall serverless`
-[ -f $HOME/bin/node/lib/node_modules/serverless/node_modules/tabtab/.completions/serverless.bash ] && . $HOME/bin/node/lib/node_modules/serverless/node_modules/tabtab/.completions/serverless.bash
+[ -f "$HOME"/bin/node/lib/node_modules/serverless/node_modules/tabtab/.completions/serverless.bash ] && . "$HOME"/bin/node/lib/node_modules/serverless/node_modules/tabtab/.completions/serverless.bash
 # tabtab source for sls package
 # uninstall by removing these lines or running `tabtab uninstall sls`
-[ -f $HOME/bin/node/lib/node_modules/serverless/node_modules/tabtab/.completions/sls.bash ] && . $HOME/bin/node/lib/node_modules/serverless/node_modules/tabtab/.completions/sls.bash
+[ -f "$HOME"/bin/node/lib/node_modules/serverless/node_modules/tabtab/.completions/sls.bash ] && . "$HOME"/bin/node/lib/node_modules/serverless/node_modules/tabtab/.completions/sls.bash
 # tabtab source for slss package
 # uninstall by removing these lines or running `tabtab uninstall slss`
-[ -f $HOME/bin/node/lib/node_modules/serverless/node_modules/tabtab/.completions/slss.bash ] && . $HOME/bin/node/lib/node_modules/serverless/node_modules/tabtab/.completions/slss.bash
+[ -f "$HOME"/bin/node/lib/node_modules/serverless/node_modules/tabtab/.completions/slss.bash ] && . "$HOME"/bin/node/lib/node_modules/serverless/node_modules/tabtab/.completions/slss.bash
 
 function join_path { local IFS=: ; echo "$*"; }
 
-LOCAL_PATH=( "$HOME/.local/bin" "$HOME/.cargo/bin" "$HOME/usr/bin" "$HOME/bin" $HOME/bin/*/ $HOME/bin/**/bin/ )
+LOCAL_PATH=( "$HOME/.local/bin" "$HOME/.cargo/bin" "$HOME/usr/bin" "$HOME/bin" "$HOME"/bin/*/ "$HOME"/bin/**/bin/ )
 
 for dir in "${LOCAL_PATH[@]}"; do
     case ":$PATH:" in
@@ -242,7 +258,7 @@ done
 
 export PATH
 
-export TFPROMOTE_DIFFTOOL=$DIFFTOOL
+export TFPROMOTE_DIFFTOOL=$DIFF_TOOL
 
 gpa () {
     # GPA_SIGINTHANDLE () {
@@ -254,7 +270,7 @@ gpa () {
         read -p "Git pull all in $DEV_FOLDER (y/N)? " -n 1 -r pull
         if [[ $pull =~ [Yy] ]]; then
             echo "Pulling all development repos. Please wait."
-            pushd $DEV_FOLDER > /dev/null
+            pushd "$DEV_FOLDER" > /dev/null || return
             count=0
             trap "GPA_SIGINTHANDLE" INT
             # For folder in $DEV_FOLDER
@@ -268,10 +284,10 @@ gpa () {
                         echo -n -e "\e[93m\xE2\x98\x90 Pulling ${D%?}"
                         # This block is strictly to surpress output
                         {
-                            pushd "${D}"
+                            pushd "${D}" || return
                             git pull
                             PULLSTATUS=$?
-                            popd
+                            popd || return
                         } &> /dev/null
                         # Overwrite = \r\e[0K
                         if [ $PULLSTATUS -eq 0 ]; then
@@ -287,7 +303,7 @@ gpa () {
                     # exit 2
                 # fi
             done
-            popd > /dev/null
+            popd > /dev/null || return
             echo -e "\e[92mProcessed $count\e[0m"
         fi
     else
