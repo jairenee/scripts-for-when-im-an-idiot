@@ -66,17 +66,22 @@ gcode() {
 
 function create_prompt {
     RETURN_VAL="$?"
-    local PROMPT 
+    local PROMPT INFO_LINE
     local RETURN_COLOR
-    PROMPT="╒═╣\d \A╞═╣\w╞══╕\n╞"
+    INFO_LINE="╒═╣\d \A╞═╣\w╞══╕\n"
     if [[ $RETURN_VAL -eq 0 ]]; then
         RETURN_COLOR=$COLOR_GREEN
     else
         RETURN_COLOR=$COLOR_RED
     fi
-    PROMPT+="$COLOR_PINK\u \$(git_display)$RETURN_COLOR\$$COLOR_RESET "
+    PROMPT="╞$COLOR_PINK \u \$(git_display)$RETURN_COLOR⪢$COLOR_RESET "
 
-    PS1="$PROMPT"
+    if [[ $PROMPTSOURCED ]]; then
+        PS1="╒══╣\W╞══╕\n$PROMPT"
+    else
+        PS1="$INFO_LINE$PROMPT"
+        PROMPTSOURCED=true
+    fi
 }
 
 PROMPT_COMMAND=create_prompt
@@ -112,6 +117,7 @@ alias path='echo $PATH | tr -s ":" "\n"'
 alias setclip='xclip -selection clipboard'
 alias getclip='setclip -o'
 
+alias cd='unset PROMPTSOURCED && cd'
 alias dev='cd $DEV_FOLDER'
 alias ldev='ll $DEV_FOLDER'
 alias pdev='pushd $DEV_FOLDER'
@@ -323,7 +329,7 @@ gpa () {
     # }
     # local ENDING=false
     if [[ -d $DEV_FOLDER ]]; then
-        echo -n "  ╚ Git pull all in $DEV_FOLDER (y/N)? "
+        echo -n "  ╚ Git pull projects in dev folder (y/N)? "
         read -n 1 -r pull
         if [[ $pull =~ [Yy] ]]; then
             echo "Pulling all development repos. Please wait."
@@ -364,7 +370,7 @@ gpa () {
             echo -e "\e[92mProcessed $count\e[0m"
         else
             echo -en "\e[1A"
-            echo -e  "\e[0K  ║ Git pull all in $DEV_FOLDER (y/N)? "
+            echo -e  "\e[0K  ║ Git pull projects in dev folder (y/N)? "
         fi
     else
         echo "${DEV_FOLDER:-\$DEV_FOLDER} is not a folder that exists"
@@ -373,15 +379,16 @@ gpa () {
 
 if [[ -z $RCSOURCED ]]; then
     echo "╞═╦╣Hello, $USER"
+    echo "╰ ╠═ Dev Folder is $DEV_FOLDER"
     gpa
     if [[ $PWD == ~ ]]; then
-        echo -n "  ╚ Go to $DEV_FOLDER (Y/n)? " 
+        echo -n "  ╚ Go to dev folder (Y/n)? " 
         read -n 1 -r toDev
+        echo -en "\e[1A"
         if [[ $toDev =~ [Yy] ]] || [[ -z $toDev ]]; then
            dev
         fi
-        echo -en "\e[1A"
-        echo -e  "\e[0K  ║ Go to $DEV_FOLDER (Y/n)? "
+        echo -e  "\e[0K  ║ Go to dev folder (Y/n)? "
     fi
 fi
 
