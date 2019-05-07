@@ -99,4 +99,4 @@ let g:startify_custom_header = s:filter_header([
 
 let g:startify_use_env = 1
 
-color 256-jungle
+color dracula
