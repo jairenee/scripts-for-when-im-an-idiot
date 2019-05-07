@@ -24,20 +24,19 @@ fi
 
 [[ -f ~/.tfvarsrc ]] && . ~/.tfvarsrc
 
-COLOR_RED="\033[0;31m"
-COLOR_YELLOW="\033[0;33m"
-COLOR_GREEN="\033[0;32m"
-COLOR_OCHRE="\033[38;5;95m"
-# COLOR_BLUE="\033[0;34m"
-COLOR_PINK="\033[01;35m"
-# COLOR_WHITE="\033[0;37m"
-COLOR_RESET="\033[0m"
+COLOR_RED="\e[0;31m"
+COLOR_GREEN="\e[0;32m"
+COLOR_YELLOW="\e[0;33m"
+COLOR_BLUE="\e[0;34m"
+COLOR_PINK="\e[01;35m"
+COLOR_WHITE="\e[0;37m"
+COLOR_RESET="\e[0m"
 
 function git_display {
   local git_status display
   git_status="$(git status 2> /dev/null)"
   
-  if ! [[ $git_status =~ "not a git repo" ]]; then
+  if [[ "$git_status" ]]; then
       local on_branch="On branch ([^${IFS}]*)"
       local on_commit="HEAD detached at ([^${IFS}]*)"
 
@@ -48,7 +47,7 @@ function git_display {
       elif [[ $git_status =~ "nothing to commit" ]]; then
         display="$COLOR_GREEN"
       else
-        display="$COLOR_OCHRE"
+        display="$COLOR_BLUE"
       fi
 
       if [[ $git_status =~ $on_branch ]]; then
@@ -60,26 +59,38 @@ function git_display {
   fi
 }
 
-gcode() {
-    echo $?
+get_work_dir() {
+    if [[ "$(pwd)" =~ "terraform" ]]; then
+        local CURRENTFOLDER ABOVEFOLDER THREEUP
+        CURRENTFOLDER="$(basename "$(pwd)")"
+        ABOVEFOLDER="$(dirname "$(pwd)")"
+        THREEUP="$(dirname "$ABOVEFOLDER")"
+        if [[ "$CURRENTFOLDER" == "terraform" ]]; then
+            echo "Terraform (base): $(basename "$ABOVEFOLDER")"
+        elif [[ "$(basename "$ABOVEFOLDER")" == "terraform" ]]; then
+            echo "Terraform ($CURRENTFOLDER): $(basename "$THREEUP")"
+        fi
+    else
+        basename "$(pwd)"
+    fi
 }
 
 function create_prompt {
-    RETURN_VAL="$?"
-    local PROMPT INFO_LINE
-    local RETURN_COLOR
-    INFO_LINE="╒═╣\d \A╞═╣\w╞══╕\n"
+    RETURN_VAL=$?
+    local PROMPT INFO_LINE CD_LINE
+    CD_LINE="╒═╣\[$COLOR_WHITE\]\d \A\[$COLOR_RESET\]╞═╣\[$COLOR_WHITE\]\w\[$COLOR_RESET\]╞══╕\n"
+    INFO_LINE="╒══╣\[$COLOR_WHITE\]\$(get_work_dir)\[$COLOR_RESET\]╞══╕\n"
     if [[ $RETURN_VAL -eq 0 ]]; then
         RETURN_COLOR=$COLOR_GREEN
     else
         RETURN_COLOR=$COLOR_RED
     fi
-    PROMPT="╞$COLOR_PINK \u \$(git_display)$RETURN_COLOR⪢$COLOR_RESET "
+    PROMPT="╞\[$COLOR_PINK\] \u \$(git_display)\[$RETURN_COLOR\]⪢\[$COLOR_RESET\] "
 
     if [[ $PROMPTSOURCED ]]; then
-        PS1="╒══╣\W╞══╕\n$PROMPT"
-    else
         PS1="$INFO_LINE$PROMPT"
+    else
+        PS1="$CD_LINE$PROMPT"
         PROMPTSOURCED=true
     fi
 }
@@ -329,7 +340,7 @@ gpa () {
     # }
     # local ENDING=false
     if [[ -d $DEV_FOLDER ]]; then
-        echo -n "  ╚ Git pull projects in dev folder (y/N)? "
+        echo -ne "  ╚ ${COLOR_WHITE}Git pull projects in dev folder (y/N)? ${COLOR_RESET}"
         read -n 1 -r pull
         if [[ $pull =~ [Yy] ]]; then
             echo "Pulling all development repos. Please wait."
@@ -378,17 +389,17 @@ gpa () {
 }
 
 if [[ -z $RCSOURCED ]]; then
-    echo "╞═╦╣Hello, $USER"
-    echo "╰ ╠═ Dev Folder is $DEV_FOLDER"
+    echo -e "╞═╦╣ ${COLOR_WHITE}Hello, ${USER}${COLOR_RESET}"
+    echo -e "╰ ╠═ ${COLOR_WHITE}Dev Folder is ${COLOR_BLUE}$DEV_FOLDER${COLOR_RESET}"
     gpa
     if [[ $PWD == ~ ]]; then
-        echo -n "  ╚ Go to dev folder (Y/n)? " 
+        echo -ne "  ╚ ${COLOR_WHITE}Go to dev folder (Y/n)? ${COLOR_RESET}" 
         read -n 1 -r toDev
         echo -en "\e[1A"
         if [[ $toDev =~ [Yy] ]] || [[ -z $toDev ]]; then
            dev
         fi
-        echo -e  "\e[0K  ║ Go to dev folder (Y/n)? "
+        echo -e "\e[0K  ║ Go to dev folder (Y/n)? "
     fi
 fi
 
