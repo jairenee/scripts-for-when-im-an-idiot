@@ -79,7 +79,7 @@ function create_prompt {
     RETURN_VAL=$?
     local PROMPT INFO_LINE CD_LINE
     CD_LINE="╒═╣\[$COLOR_WHITE\]\d \A\[$COLOR_RESET\]╞═╣\[$COLOR_WHITE\]\w\[$COLOR_RESET\]╞══╕\n"
-    INFO_LINE="╒══╣\[$COLOR_WHITE\]\$(get_work_dir)\[$COLOR_RESET\]╞══╕\n"
+    INFO_LINE="╒═╣\[$COLOR_WHITE\]\$(get_work_dir)\[$COLOR_RESET\]╞══╕\n"
     if [[ $RETURN_VAL -eq 0 ]]; then
         RETURN_COLOR=$COLOR_GREEN
     else
