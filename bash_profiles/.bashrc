@@ -68,7 +68,7 @@ function create_prompt {
     RETURN_VAL="$?"
     local PROMPT 
     local RETURN_COLOR
-    PROMPT="╔═╣\d \A╞═╣\w╞══╗\n║"
+    PROMPT="╒═╣\d \A╞═╣\w╞══╕\n╞"
     if [[ $RETURN_VAL -eq 0 ]]; then
         RETURN_COLOR=$COLOR_GREEN
     else
@@ -80,7 +80,7 @@ function create_prompt {
 }
 
 PROMPT_COMMAND=create_prompt
-PS2="║"
+PS2="╞"
 
 # vimx for when you can't build clipboard support from source
 if hash vimx 2>/dev/null; then
