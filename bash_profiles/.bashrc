@@ -24,39 +24,49 @@ fi
 
 [[ -f ~/.tfvarsrc ]] && . ~/.tfvarsrc
 
-COLOR_RED="\e[0;31m"
-COLOR_GREEN="\e[0;32m"
-COLOR_YELLOW="\e[0;33m"
-COLOR_BLUE="\e[0;34m"
-COLOR_PINK="\e[01;35m"
-COLOR_WHITE="\e[0;37m"
-COLOR_RESET="\e[0m"
+# COLOR_RED="\e[0;31m"
+# COLOR_GREEN="\e[0;32m"
+# COLOR_YELLOW="\e[0;33m"
+# COLOR_BLUE="\e[0;34m"
+# COLOR_PINK="\e[01;35m"
+# COLOR_WHITE="\e[0;37m"
+# COLOR_RESET="\e[0m"
+
+RED=$(tput setaf 1)
+GREEN=$(tput setaf 034)
+YELLOW=$(tput setaf 226)
+BLUE=$(tput setaf 44)
+WHITE=$(tput setaf 7)
+PINK=$(tput setaf 200)
+RESET=$(tput sgr0)
+
+
+function git_color {
+    local git_status
+    git_status="$(git status 2> /dev/null)"
+
+    if [[ ! $git_status =~ "working tree clean" ]]; then
+        echo "$RED"
+    elif [[ $git_status =~ "Your branch is ahead of" ]]; then
+        echo "$YELLOW"
+    elif [[ $git_status =~ "nothing to commit" ]]; then
+        echo "$GREEN"
+    else
+        echo "$BLUE"
+    fi
+}
 
 function git_display {
-  local git_status display
-  git_status="$(git status 2> /dev/null)"
-  
-  if [[ "$git_status" ]]; then
-      local on_branch="On branch ([^${IFS}]*)"
-      local on_commit="HEAD detached at ([^${IFS}]*)"
+    local git_status
+    git_status="$(git status 2> /dev/null)"
+    local on_branch="On branch ([^${IFS}]*)"
+    local on_commit="HEAD detached at ([^${IFS}]*)"
 
-      if [[ ! $git_status =~ "working tree clean" ]]; then
-        display="$COLOR_RED"
-      elif [[ $git_status =~ "Your branch is ahead of" ]]; then
-        display="$COLOR_YELLOW"
-      elif [[ $git_status =~ "nothing to commit" ]]; then
-        display="$COLOR_GREEN"
-      else
-        display="$COLOR_BLUE"
-      fi
-
-      if [[ $git_status =~ $on_branch ]]; then
-        display+="(${BASH_REMATCH[1]}) "
-      elif [[ $git_status =~ $on_commit ]]; then
-        display+="(${BASH_REMATCH[1]}) "
-      fi
-      echo -e "$display"
-  fi
+    if [[ $git_status =~ $on_branch ]]; then
+        echo "(${BASH_REMATCH[1]}) "
+    elif [[ $git_status =~ $on_commit ]]; then
+        echo "(${BASH_REMATCH[1]}) "
+    fi
 }
 
 get_work_dir() {
@@ -78,14 +88,14 @@ get_work_dir() {
 function create_prompt {
     RETURN_VAL=$?
     local PROMPT INFO_LINE CD_LINE
-    CD_LINE="╒═╣\[$COLOR_WHITE\]\d \A\[$COLOR_RESET\]╞═╣\[$COLOR_WHITE\]\w\[$COLOR_RESET\]╞══╕\n"
-    INFO_LINE="╒═╣\[$COLOR_WHITE\]\$(get_work_dir)\[$COLOR_RESET\]╞══╕\n"
+    CD_LINE="╒═╣\[$WHITE\]\d \A\[$RESET\]╞═╣\[$WHITE\]\w\[$RESET\]╞══╕\n"
+    INFO_LINE="╒═╣\[$WHITE\]\$(get_work_dir)\[$RESET\]╞══╕\n"
     if [[ $RETURN_VAL -eq 0 ]]; then
-        RETURN_COLOR=$COLOR_GREEN
+        RETURN_COLOR=$GREEN
     else
-        RETURN_COLOR=$COLOR_RED
+        RETURN_COLOR=$RED
     fi
-    PROMPT="╞\[$COLOR_PINK\] \u \$(git_display)\[$RETURN_COLOR\]⪢\[$COLOR_RESET\] "
+    PROMPT="╞\[$PINK\] \u \[\$(git_color)\]\$(git_display)\[$RETURN_COLOR\]⪢\[$RESET\] "
 
     if [[ $PROMPTSOURCED ]]; then
         PS1="$INFO_LINE$PROMPT"
@@ -340,7 +350,7 @@ gpa () {
     # }
     # local ENDING=false
     if [[ -d $DEV_FOLDER ]]; then
-        echo -ne "  ╚ ${COLOR_WHITE}Git pull projects in dev folder (y/N)? ${COLOR_RESET}"
+        echo -ne "  ╚ ${WHITE}Git pull projects in dev folder (y/N)? ${RESET}"
         read -n 1 -r pull
         if [[ $pull =~ [Yy] ]]; then
             echo "Pulling all development repos. Please wait."
@@ -389,11 +399,11 @@ gpa () {
 }
 
 if [[ -z $RCSOURCED ]]; then
-    echo -e "╞═╦╣ ${COLOR_WHITE}Hello, ${USER}${COLOR_RESET}"
-    echo -e "╰ ╠═ ${COLOR_WHITE}Dev Folder is ${COLOR_BLUE}$DEV_FOLDER${COLOR_RESET}"
+    echo -e "╞═╦╣ ${WHITE}Hello, ${USER}${RESET}"
+    echo -e "╰ ╠═ ${WHITE}Dev Folder is ${BLUE}$DEV_FOLDER${RESET}"
     gpa
     if [[ $PWD == ~ ]]; then
-        echo -ne "  ╚ ${COLOR_WHITE}Go to dev folder (Y/n)? ${COLOR_RESET}" 
+        echo -ne "  ╚ ${WHITE}Go to dev folder (Y/n)? ${RESET}" 
         read -n 1 -r toDev
         echo -en "\e[1A"
         if [[ $toDev =~ [Yy] ]] || [[ -z $toDev ]]; then
