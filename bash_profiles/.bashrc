@@ -24,7 +24,62 @@ fi
 
 [[ -f ~/.tfvarsrc ]] && . ~/.tfvarsrc
 
-# Git pull all in dev folder
+COLOR_RED="\033[0;31m"
+COLOR_YELLOW="\033[0;33m"
+COLOR_GREEN="\033[0;32m"
+COLOR_OCHRE="\033[38;5;95m"
+# COLOR_BLUE="\033[0;34m"
+COLOR_PINK="\033[01;35m"
+# COLOR_WHITE="\033[0;37m"
+COLOR_RESET="\033[0m"
+
+function git_display {
+  local git_status display
+  git_status="$(git status 2> /dev/null)"
+  
+  if ! [[ $git_status =~ "not a git repo" ]]; then
+      local on_branch="On branch ([^${IFS}]*)"
+      local on_commit="HEAD detached at ([^${IFS}]*)"
+
+      if [[ ! $git_status =~ "working tree clean" ]]; then
+        display="$COLOR_RED"
+      elif [[ $git_status =~ "Your branch is ahead of" ]]; then
+        display="$COLOR_YELLOW"
+      elif [[ $git_status =~ "nothing to commit" ]]; then
+        display="$COLOR_GREEN"
+      else
+        display="$COLOR_OCHRE"
+      fi
+
+      if [[ $git_status =~ $on_branch ]]; then
+        display+="(${BASH_REMATCH[1]}) "
+      elif [[ $git_status =~ $on_commit ]]; then
+        display+="(${BASH_REMATCH[1]}) "
+      fi
+      echo -e "$display"
+  fi
+}
+
+gcode() {
+    echo $?
+}
+
+function create_prompt {
+    RETURN_VAL="$?"
+    local PROMPT 
+    local RETURN_COLOR
+    PROMPT="╔═╣\d \A╞═╣\w╞══╗\n║"
+    if [[ $RETURN_VAL -eq 0 ]]; then
+        RETURN_COLOR=$COLOR_GREEN
+    else
+        RETURN_COLOR=$COLOR_RED
+    fi
+    PROMPT+="$COLOR_PINK\u \$(git_display)$RETURN_COLOR\$$COLOR_RESET "
+
+    PS1="$PROMPT"
+}
+
+PROMPT_COMMAND=create_prompt
 
 # vimx for when you can't build clipboard support from source
 if hash vimx 2>/dev/null; then
@@ -267,7 +322,8 @@ gpa () {
     # }
     # local ENDING=false
     if [[ -d $DEV_FOLDER ]]; then
-        read -p "Git pull all in $DEV_FOLDER (y/N)? " -n 1 -r pull
+        echo -n "  ╚ Git pull all in $DEV_FOLDER (y/N)? "
+        read -n 1 -r pull
         if [[ $pull =~ [Yy] ]]; then
             echo "Pulling all development repos. Please wait."
             pushd "$DEV_FOLDER" > /dev/null || return
@@ -305,6 +361,9 @@ gpa () {
             done
             popd > /dev/null || return
             echo -e "\e[92mProcessed $count\e[0m"
+        else
+            echo -en "\e[1A"
+            echo -e  "\e[0K  ║ Git pull all in $DEV_FOLDER (y/N)? "
         fi
     else
         echo "${DEV_FOLDER:-\$DEV_FOLDER} is not a folder that exists"
@@ -312,13 +371,16 @@ gpa () {
 }
 
 if [[ -z $RCSOURCED ]]; then
+    echo "╞═╦╣Hello, $USER"
     gpa
-
     if [[ $PWD == ~ ]]; then
-        read -p "To dev folder (Y/n)? " -n 1 -r toDev
+        echo -n "  ╚ Go to $DEV_FOLDER (Y/n)? " 
+        read -n 1 -r toDev
         if [[ $toDev =~ [Yy] ]] || [[ -z $toDev ]]; then
            dev
         fi
+        echo -en "\e[1A"
+        echo -e  "\e[0K  ║ Go to $DEV_FOLDER (Y/n)? "
     fi
 fi
 
