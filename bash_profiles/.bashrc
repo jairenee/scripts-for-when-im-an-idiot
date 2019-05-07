@@ -80,6 +80,7 @@ function create_prompt {
 }
 
 PROMPT_COMMAND=create_prompt
+PS2="║"
 
 # vimx for when you can't build clipboard support from source
 if hash vimx 2>/dev/null; then
