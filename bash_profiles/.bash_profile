@@ -2,5 +2,6 @@
 
 # Login and non-login shells should be identical
 if [ -f ~/.bashrc ]; then
-	. ~/.bashrc
+    # shellcheck source=/dev/null
+	BPRSOURCED=true && . ~/.bashrc
 fi

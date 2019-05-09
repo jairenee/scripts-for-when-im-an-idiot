@@ -4,7 +4,7 @@ stty -ixon
 
 [[ -f /etc/bashrc ]] && . /etc/bashrc
 
-if [ -f ~/.bash_settings  ]; then
+if [[ -f ~/.bash_settings ]]; then
     . ~/.bash_settings
 else
     echo "====="
@@ -39,6 +39,7 @@ BLUE=$(tput setaf 44)
 WHITE=$(tput setaf 7)
 PINK=$(tput setaf 200)
 RESET=$(tput sgr0)
+BOLD=$(tput bold)
 
 
 function git_color {
@@ -57,15 +58,19 @@ function git_color {
 }
 
 function git_display {
-    local git_status
+    local git_status marker=""
     git_status="$(git status 2> /dev/null)"
+    git_remote="$(git remote show origin 2> /dev/null)"
     local on_branch="On branch ([^${IFS}]*)"
     local on_commit="HEAD detached at ([^${IFS}]*)"
+    if [[ $git_remote =~ "local out of date" ]]; then
+        marker="*"
+    fi
 
     if [[ $git_status =~ $on_branch ]]; then
-        echo "(${BASH_REMATCH[1]}) "
+        echo "(${BASH_REMATCH[1]}${marker}) "
     elif [[ $git_status =~ $on_commit ]]; then
-        echo "(${BASH_REMATCH[1]}) "
+        echo "(${BASH_REMATCH[1]}${marker}) "
     fi
 }
 
@@ -76,9 +81,20 @@ get_work_dir() {
         ABOVEFOLDER="$(dirname "$(pwd)")"
         THREEUP="$(dirname "$ABOVEFOLDER")"
         if [[ "$CURRENTFOLDER" == "terraform" ]]; then
-            echo "Terraform (base): $(basename "$ABOVEFOLDER")"
+            echo "TF (base): $(basename "$ABOVEFOLDER")"
         elif [[ "$(basename "$ABOVEFOLDER")" == "terraform" ]]; then
-            echo "Terraform ($CURRENTFOLDER): $(basename "$THREEUP")"
+            case $CURRENTFOLDER in
+                *"dev"*)
+                    CURRENTFOLDER="$BLUE$CURRENTFOLDER$WHITE"
+                    ;;
+                *"stage"*)
+                    CURRENTFOLDER="$YELLOW$CURRENTFOLDER$WHITE"
+                    ;;
+                *"prod"*)
+                    CURRENTFOLDER="$RED$BOLD$CURRENTFOLDER$WHITE"
+                    ;;
+            esac
+            echo "TF ($CURRENTFOLDER): $(basename "$THREEUP")"
         fi
     else
         basename "$(pwd)"
@@ -87,9 +103,14 @@ get_work_dir() {
 
 function create_prompt {
     RETURN_VAL=$?
-    local PROMPT INFO_LINE CD_LINE
-    CD_LINE="╒═╣\[$WHITE\]\d \A\[$RESET\]╞═╣\[$WHITE\]\w\[$RESET\]╞══╕\n"
-    INFO_LINE="╒═╣\[$WHITE\]\$(get_work_dir)\[$RESET\]╞══╕\n"
+    local PROMPT INFO_LINE CD_LINE INFO_DIR
+    if [[ "$(pwd)" =~ "terraform" ]]; then
+        INFO_DIR="\$(get_work_dir)"
+    else
+        INFO_DIR="\w"
+    fi
+    CD_LINE="╒═╣\[$WHITE\] \d \A \[$RESET\]╞═╣\[$WHITE\] \[${INFO_DIR}\] \[$RESET\]╞══╕\n"
+    INFO_LINE="╒═╣\[$WHITE\] \[\$(get_work_dir)\] \[$RESET\]╞══╕\n"
     if [[ $RETURN_VAL -eq 0 ]]; then
         RETURN_COLOR=$GREEN
     else
@@ -119,54 +140,7 @@ fi
 # I just prefer this to C-x->C-e
 bind '"\C-e": edit-and-execute-command'
 
-alias ebr="vim ~/.bashrc"
-alias ebp="vim ~/.bash_profile"
-alias sbp="source ~/.bash_profile"
-alias evr="vim ~/.vimrc"
-alias evc="vim ~/.vim_runtime/config.vim"
-alias evpc="vim ~/.vim_runtime/vimrcs/plugins_config.vim"
-alias ei3="vim ~/.i3/config"
-alias eis="vim ~/.i3status.conf"
-
-alias c="clear"
-alias e="vim"
-
-alias chx="chmod +x"
-
-alias path='echo $PATH | tr -s ":" "\n"'
-
-alias setclip='xclip -selection clipboard'
-alias getclip='setclip -o'
-
-alias cd='unset PROMPTSOURCED && cd'
-alias dev='cd $DEV_FOLDER'
-alias ldev='ll $DEV_FOLDER'
-alias pdev='pushd $DEV_FOLDER'
-alias cvr="cd ~/.vim_runtime"
-alias ~="cd ~"
-alias ..="cd .."
-alias ...="cd ../.."
-alias ....="cd ../../.."
-
-alias oops='cd $OLDPWD'
-alias ls="ls -a --color=auto"
-alias ll="ls -l"
-alias lg="ll | grep"
-alias cstack='cd "$(dirs -l -0)" && dirs -c'
-alias mcde="mcd -o"
-alias rm='/bin/rm -irv'
-alias yrm='yes | rm'/
-alias cp="cp -i"
-alias df="df -h"
-alias free="free -m"
-
-alias gst="git status"
-alias gstore="git config credential.helper store"
-alias gcm="git pull && git add . && git commit && git push"
-alias gcp="gc -p"
-alias gp="git push"
-alias gloce='git config --local user.email "$USER_EMAIL"'
-alias eeegp="git add . && git commit -m 'This is an emergency commit because of a building evacuation or other sudden major event.' && git push"
+[[ -f ~/.bash_aliases ]] && . ~/.bash_aliases
 
 testsh () {
     touch "$1"
@@ -353,10 +327,11 @@ gpa () {
         echo -ne "  ╚ ${WHITE}Git pull projects in dev folder (y/N)? ${RESET}"
         read -n 1 -r pull
         if [[ $pull =~ [Yy] ]]; then
-            echo "Pulling all development repos. Please wait."
+            # echo -en "\e[1A"
+            echo -e  "\r\e[0K  ╠ ${GREEN}Git pull projects in dev folder (${BOLD}y${RESET}${GREEN}/N)? ${RESET}"
+            echo "  ╨ Pulling all development repos. Please wait."
             pushd "$DEV_FOLDER" > /dev/null || return
             count=0
-            trap "GPA_SIGINTHANDLE" INT
             # For folder in $DEV_FOLDER
             for D in */; do
                 # if [[ $ENDING != true ]]; then
@@ -391,26 +366,87 @@ gpa () {
             echo -e "\e[92mProcessed $count\e[0m"
         else
             echo -en "\e[1A"
-            echo -e  "\e[0K  ║ Git pull projects in dev folder (y/N)? "
+            echo -e  "\e[0K  ╠ ${RED}Git pull projects in dev folder (y/${BOLD}N${RESET}${RED})? ${RESET}"
         fi
     else
         echo "${DEV_FOLDER:-\$DEV_FOLDER} is not a folder that exists"
     fi
+} 
+
+gtd() {
+    echo -ne "  ╚ ${WHITE}Go to dev folder (Y/n)? ${RESET}" 
+    read -n 1 -r toDev
+    echo -en "\e[1A"
+    if [[ $toDev =~ [Yy] ]] || [[ -z $toDev ]]; then
+        echo -e "\e[0K  ╠ ${GREEN}Go to dev folder (${BOLD}Y${RESET}${GREEN}/n)? ${RESET}"
+        dev
+    else
+        echo -e "\e[0K  ╠ ${RED}Go to dev folder (Y/${BOLD}n${RESET}${RED})? ${RESET}"
+    fi
 }
 
-if [[ -z $RCSOURCED ]]; then
-    echo -e "╞═╦╣ ${WHITE}Hello, ${USER}${RESET}"
-    echo -e "╰ ╠═ ${WHITE}Dev Folder is ${BLUE}$DEV_FOLDER${RESET}"
-    gpa
-    if [[ $PWD == ~ ]]; then
-        echo -ne "  ╚ ${WHITE}Go to dev folder (Y/n)? ${RESET}" 
-        read -n 1 -r toDev
-        echo -en "\e[1A"
-        if [[ $toDev =~ [Yy] ]] || [[ -z $toDev ]]; then
-           dev
-        fi
-        echo -e "\e[0K  ║ Go to dev folder (Y/n)? "
-    fi
-fi
+function blink() {
+    local MSG=$1 SPD=0.3 BACKSP OVERLINE
+    BACKSP=$(printf '\b%.0s' $(seq 1 ${#MSG}))
+    OVERLINE=$(printf ' %.0s' $(seq 1 ${#MSG}))
 
-export RCSOURCED=true
+    printf "%s" "${MSG}"
+    sleep $SPD
+    printf "%s%s" "${BACKSP}" "${OVERLINE}"
+    sleep $SPD
+    printf "%s%s" "${BACKSP}" "${MSG}"
+    sleep $SPD
+    printf "%s%s" "${BACKSP}" "${OVERLINE}"
+    sleep $SPD
+    printf "%s%s" "${BACKSP}" "${MSG}"
+
+}
+
+if [[ -z $BPRSOURCED ]]; then
+    LINE1="Hello ${USER}"
+    LINE2="Dev Folder is"
+    LINESPEED=0.04
+    echo -e  "╞═╦╣ "
+    echo -en "╰ ╠═ "
+    echo -en "\e[2A"
+    echo -en "${WHITE}"
+    for i in $(seq 1 ${#LINE1}); do
+        printf "%s" "${LINE1:i-1:1}"
+        sleep $LINESPEED
+    done
+    echo -en "${RESET}\n╰ ╠═ ${WHITE}"
+    for i in $(seq 1 ${#LINE2}); do
+        printf "%s" "${LINE2:i-1:1}"
+        sleep $LINESPEED
+    done
+    echo -ne " ${BLUE}"
+    blink "${DEV_FOLDER}"
+    echo -ne  "${RESET}"
+    sleep 1
+    echo
+    # echo -e "╞═╦╣ ${WHITE}Hello, ${USER}${RESET}"
+    # echo -e "╰ ╠═ ${WHITE}Dev Folder is ${BLUE}$DEV_FOLDER${RESET}"
+    # sleep 3
+    gpa
+    gtd
+
+    function printOpen {
+        echo -e   "╒═╣"
+        echo -en  "╞"
+        sleep "$1"
+        echo -en "\r\e[1A"
+    }
+
+    function printClear {
+        echo -e   "\r\e[0K"
+        echo -en  "\r\e[0K "
+        sleep "$1"
+        echo -en "\r\e[1A"
+    }
+
+    printOpen 0.5
+    printClear 0.2
+    printOpen 0.6
+    printClear 0.3
+
+fi
