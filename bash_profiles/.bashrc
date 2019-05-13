@@ -131,6 +131,7 @@ get_work_dir() {
 }
 
 function create_prompt {
+    tput civis
     RETURN_VAL=$?
     local PROMPT INFO_LINE CD_LINE INFO_DIR
     if [[ "$(pwd)" =~ "terraform" ]]; then
@@ -156,6 +157,7 @@ function create_prompt {
         PS1="$CD_LINE$PROMPT"
         PROMPTSOURCED=true
     fi
+    tput cnorm
 }
 
 PROMPT_SYMBOL="⪢"
