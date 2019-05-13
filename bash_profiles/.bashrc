@@ -116,7 +116,7 @@ function create_prompt {
     else
         RETURN_COLOR=$RED
     fi
-    PROMPT="╞\[$PINK\] \u \[\$(git_color)\]\$(git_display)\[$RETURN_COLOR\]⪢\[$RESET\] "
+    PROMPT="╰\[$PINK\] \u \[\$(git_color)\]\$(git_display)\[$RETURN_COLOR\]⪢\[$RESET\] "
 
     if [[ $PROMPTSOURCED ]]; then
         PS1="$INFO_LINE$PROMPT"
@@ -127,7 +127,7 @@ function create_prompt {
 }
 
 PROMPT_COMMAND=create_prompt
-PS2="╞"
+PS2="\r\e[1A│\n╰ "
 
 # vimx for when you can't build clipboard support from source
 if hash vimx 2>/dev/null; then
@@ -385,48 +385,57 @@ gtd() {
     fi
 }
 
-function blink() {
-    local MSG=$1 SPD=0.3 BACKSP OVERLINE
+function blinkInPlace() {
+    local MSG=$1 SPD=$2 TIMES=$3 BACKSP OVERLINE
     BACKSP=$(printf '\b%.0s' $(seq 1 ${#MSG}))
     OVERLINE=$(printf ' %.0s' $(seq 1 ${#MSG}))
 
     printf "%s" "${MSG}"
-    sleep $SPD
-    printf "%s%s" "${BACKSP}" "${OVERLINE}"
-    sleep $SPD
-    printf "%s%s" "${BACKSP}" "${MSG}"
-    sleep $SPD
-    printf "%s%s" "${BACKSP}" "${OVERLINE}"
-    sleep $SPD
-    printf "%s%s" "${BACKSP}" "${MSG}"
 
+    for i in $(seq 1 "${TIMES}"); do
+        sleep "$SPD"
+        printf "%s%s" "${BACKSP}" "${OVERLINE}"
+        sleep "$SPD"
+        printf "%s%s" "${BACKSP}" "${MSG}"
+    done
+    printf "%s\n" "${RESET}"
+}
+
+function blinkTwoLines() {
+    local LINE1=$1 LINE2=$2 SPD=$3
+
+    echo -e   "$LINE1"
+    echo -en  "$LINE2"
+    sleep "$SPD"
+    echo -en "\r\e[1A"
+
+    echo -e   "\r\e[0K"
+    echo -en  "\r\e[0K "
+    sleep "$(echo "$SPD"/2 | bc -l)"
+    echo -en "\r\e[1A"
 }
 
 if [[ -z $BPRSOURCED ]]; then
-    LINE1="Hello ${USER}"
-    LINE2="Dev Folder is"
+    LINE1="Hello ${PINK}${USER}${RESET}"
+    LINE2="Dev Folder is ${BLUE}"
     LINESPEED=0.04
     echo -e  "╞═╦╣ "
-    echo -en "╰ ╠═ "
+    echo -en "╰ ╚═ "
     echo -en "\e[2A"
     echo -en "${WHITE}"
     for i in $(seq 1 ${#LINE1}); do
         printf "%s" "${LINE1:i-1:1}"
         sleep $LINESPEED
     done
-    echo -en "${RESET}\n╰ ╠═ ${WHITE}"
+    echo -en "${RESET}\n╰ ╚═ ${WHITE}"
     for i in $(seq 1 ${#LINE2}); do
         printf "%s" "${LINE2:i-1:1}"
         sleep $LINESPEED
     done
-    echo -ne " ${BLUE}"
-    blink "${DEV_FOLDER}"
-    echo -ne  "${RESET}"
+    blinkInPlace "${DEV_FOLDER}" 0.3 2
     sleep 1
-    echo
-    # echo -e "╞═╦╣ ${WHITE}Hello, ${USER}${RESET}"
-    # echo -e "╰ ╠═ ${WHITE}Dev Folder is ${BLUE}$DEV_FOLDER${RESET}"
-    # sleep 3
+    echo -e "\e[1A╰ ╠" 
+
     gpa
     gtd
 
@@ -444,9 +453,7 @@ if [[ -z $BPRSOURCED ]]; then
         echo -en "\r\e[1A"
     }
 
-    printOpen 0.5
-    printClear 0.2
-    printOpen 0.6
-    printClear 0.3
+    blinkTwoLines "╒═╣" "╰" 0.4
+    blinkTwoLines "╒═╣" "╰" 0.6
 
 fi
