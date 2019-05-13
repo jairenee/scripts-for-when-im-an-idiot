@@ -126,7 +126,7 @@ get_work_dir() {
             echo "TF ($CURRENTFOLDER): $(basename "$THREEUP")"
         fi
     else
-        basename "$(pwd)"
+        basename "$(dirs)"
     fi
 }
 
@@ -447,15 +447,29 @@ function writeOut() {
     done
 }
 
-function writeNameLine() {
-    local LINE1=$1 LINE2=$2 SPD=$3
-    echo     "$LINE1"
-    echo -en "$LINE2${PINK}"
+function writeNameDate() {
+    local LINE1=$1 LINE2=$2 LINE1A=$3 LINE1B=$4 SPD=$5 current_date current_dirs long_str
+    current_date=$(date +"%a %b %d %H:%M")
+    current_dirs=$(dirs)
+    [[ ${#current_dirs} -gt ${#current_date} ]] && long_str=${#current_dirs} || long_str=${#current_date}
+    echo -e  "$LINE1"
+    echo -en "$LINE2${UPONE}"
+    for i in $(seq 1 "$long_str"); do
+        echo -en "${CLEAR}$LINE1 ${WHITE}${current_date:0:i}${RESET} $LINE1A ${WHITE}${current_dirs:0:i}${RESET} $LINE1B"
+        sleep "$SPD"
+    done
+    echo -en "\n${CLEAR}$LINE2${PINK}"
     writeOut "$USER" "$SPD"
+    tput civis
     echo -en "${UPONE}${RESET}"
-    echo -e  "${CLEAR}"
-    echo -en "${CLEAR}"
-    echo -en "${UPONE}"
+    # echo -e  "${CLEAR}"
+    # echo -en "${CLEAR}"
+    # echo -en "${UPONE}"
+}
+
+writeDateLine() {
+    local LINE1=$1 LINE2=
+    
 }
 
 if [[ -z $BPRSOURCED ]]; then
@@ -485,13 +499,17 @@ if [[ -z $BPRSOURCED ]]; then
     echo -e "${UPONE}╰ ╠" 
 
     gpa
-    # gtd
+    gtd
 
     LINE1="╒═╣" 
+    LINE1A="╞═╣"
+    LINE1B="╞══╕"
     LINE2="╰ "
 
     blinkTwoLines "$LINE1" "$LINE2" 0.4
     blinkTwoLines "$LINE1" "$LINE2" 0.6
-    writeNameLine "$LINE1" "$LINE2" $LINESPEED
+    writeNameDate "$LINE1" "$LINE2" "$LINE1A" "$LINE1B" $LINESPEED
+
+    tput cnorm
 
 fi

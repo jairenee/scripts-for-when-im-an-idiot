@@ -3,6 +3,7 @@ endif
 let g:syntastic_python_checkers = [ 'flake8' ]
 let g:syntastic_sh_checkers = [ 'shellcheck' ]
 let b:shell = "bash"
+let g:markdown_syntax_conceal = 0
 
 set list
 set listchars=tab:>-
