@@ -24,22 +24,33 @@ fi
 
 [[ -f ~/.tfvarsrc ]] && . ~/.tfvarsrc
 
-# COLOR_RED="\e[0;31m"
-# COLOR_GREEN="\e[0;32m"
-# COLOR_YELLOW="\e[0;33m"
-# COLOR_BLUE="\e[0;34m"
-# COLOR_PINK="\e[01;35m"
-# COLOR_WHITE="\e[0;37m"
-# COLOR_RESET="\e[0m"
+get_colors() {
+    color(){
+        for c; do
+            printf '\e[48;5;%dm%03d' "$c" "$c"
+        done
+        printf '\e[0m \n'
+    }
+
+    IFS=$' \t\n'
+    color {0..15}
+    for ((i=0;i<6;i++)); do
+        color $(seq $((i*36+16)) $((i*36+51)))
+    done
+    color {232..255}
+}
 
 RED=$(tput setaf 1)
-GREEN=$(tput setaf 034)
+GREEN=$(tput setaf 34)
 YELLOW=$(tput setaf 226)
 BLUE=$(tput setaf 44)
 WHITE=$(tput setaf 7)
 PINK=$(tput setaf 200)
 RESET=$(tput sgr0)
 BOLD=$(tput bold)
+CLEAR="\r\e[0K"
+UPONE="\r\e[1A"
+UPTWO="\r\e[2A"
 
 
 function git_color {
@@ -54,6 +65,24 @@ function git_color {
         echo "$GREEN"
     else
         echo "$BLUE"
+    fi
+}
+
+function run_pull_check {
+    current_branch_info="$(git branch -vv | grep '\*')"
+    current_branch="$(echo "$current_branch_info" | awk '{print $2}')"
+    remote_for_branch="$(echo "$current_branch_info" \
+        | awk '{print $4}' | sed 's/\// /g' \
+        | awk '{print $1}' | sed 's/\[//g')"
+    git_remote="$(git remote show "$remote_for_branch" 2> /dev/null)"
+    branch_status="${current_branch} pushes to .+local out of date"
+    if [[ $git_remote =~ $branch_status ]]; then
+        echo -e "${UPONE}│\n│ $(basename "$(pwd)")'s $current_branch branch has new data from $remote_for_branch"
+        echo -n "╰ Git pull (y/N)? " 
+        read -r GIT_PULL
+        if [[ $GIT_PULL =~ [Yy] ]]; then
+            git pull
+        fi
     fi
 }
 
@@ -116,18 +145,23 @@ function create_prompt {
     else
         RETURN_COLOR=$RED
     fi
-    PROMPT="╰\[$PINK\] \u \[\$(git_color)\]\$(git_display)\[$RETURN_COLOR\]⪢\[$RESET\] "
+    PROMPT="╰\[$PINK\] \u \[\$(git_color)\]\$(git_display)\[$RETURN_COLOR\]$PROMPT_SYMBOL\[$RESET\] "
 
     if [[ $PROMPTSOURCED ]]; then
         PS1="$INFO_LINE$PROMPT"
     else
+        if [[ -d ".git" ]]; then
+            run_pull_check
+        fi
         PS1="$CD_LINE$PROMPT"
         PROMPTSOURCED=true
     fi
 }
 
+PROMPT_SYMBOL="⪢"
 PROMPT_COMMAND=create_prompt
-PS2="\r\e[1A│\n╰ "
+PS2="${UPONE}│\n╰ "
+PS4="${0} Line:${LINENO}+- "
 
 # vimx for when you can't build clipboard support from source
 if hash vimx 2>/dev/null; then
@@ -314,59 +348,48 @@ for dir in "${LOCAL_PATH[@]}"; do
 done
 
 export PATH
+export CDPATH='.:~:~/Development'
 
 export TFPROMOTE_DIFFTOOL=$DIFF_TOOL
 
 gpa () {
-    # GPA_SIGINTHANDLE () {
-        # ENDING=true
-        # echo "ENDING GRACEFULLY..."
-    # }
-    # local ENDING=false
     if [[ -d $DEV_FOLDER ]]; then
         echo -ne "  ╚ ${WHITE}Git pull projects in dev folder (y/N)? ${RESET}"
         read -n 1 -r pull
         if [[ $pull =~ [Yy] ]]; then
-            # echo -en "\e[1A"
-            echo -e  "\r\e[0K  ╠ ${GREEN}Git pull projects in dev folder (${BOLD}y${RESET}${GREEN}/N)? ${RESET}"
+            echo -e  "${CLEAR}  ╠ ${GREEN}Git pull projects in dev folder (${BOLD}y${RESET}${GREEN}/N)? ${RESET}"
             echo "  ╨ Pulling all development repos. Please wait."
             pushd "$DEV_FOLDER" > /dev/null || return
             count=0
             # For folder in $DEV_FOLDER
             for D in */; do
-                # if [[ $ENDING != true ]]; then
-                    # If /.git is a folder that exists inside of that folder
-                    if [ -d "${D%?}/.git" ]; then
-                        # Start pulling
-                        (( count++ ))
-                        # No new line in yellow (\e[93m) \xE2\x98\x90 = ☐
-                        echo -n -e "\e[93m\xE2\x98\x90 Pulling ${D%?}"
-                        # This block is strictly to surpress output
-                        {
-                            pushd "${D}" || return
-                            git pull
-                            PULLSTATUS=$?
-                            popd || return
-                        } &> /dev/null
-                        # Overwrite = \r\e[0K
-                        if [ $PULLSTATUS -eq 0 ]; then
-                            # All good? Overwrite the line in green! \xE2\x98\x91 = ☑
-                            echo -e "\r\e[0K\e[92m\xE2\x98\x91 Pulled ${D%?}!"
-                        else
-                            # Problem? Overwrite the line in red. \xE2\x98\x91 = ☒
-                            echo -e "\r\e[0K\e[91m\xE2\x98\x92 Pull failed for ${D%?}!"
-                        fi
+                # If /.git is a folder that exists inside of that folder
+                if [ -d "${D%?}/.git" ]; then
+                    # Start pulling
+                    (( count++ ))
+                    # No new line in yellow \xE2\x98\x90 = ☐
+                    echo -en "${YELLOW}☐ Pulling ${D%?}"
+                    # This block is strictly to surpress output
+                    {
+                        pushd "${D}" || return
+                        git pull
+                        PULLSTATUS=$?
+                        popd || return
+                    } &> /dev/null
+                    if [ $PULLSTATUS -eq 0 ]; then
+                        # All good? Overwrite the line in green! \xE2\x98\x91 = ☑
+                        echo -e "${CLEAR}${GREEN}☑ Pulled ${D%?}!"
+                    else
+                        # Problem? Overwrite the line in red. \xE2\x98\x91 = ☒
+                        echo -e "${CLEAR}${RED}☒ Pull failed for ${D%?}!"
                     fi
-                # else
-                    # echo -e "\e[92mProcessed $count, but ended early\e[0m"
-                    # exit 2
-                # fi
+                fi
             done
             popd > /dev/null || return
-            echo -e "\e[92mProcessed $count\e[0m"
+            echo -e "${GREEN}Processed $count${RESET}"
         else
-            echo -en "\e[1A"
-            echo -e  "\e[0K  ╠ ${RED}Git pull projects in dev folder (y/${BOLD}N${RESET}${RED})? ${RESET}"
+            echo -en "${UPONE}"
+            echo -e  "  ╠ ${RED}Git pull projects in dev folder (y/${BOLD}N${RESET}${RED})? ${RESET}"
         fi
     else
         echo "${DEV_FOLDER:-\$DEV_FOLDER} is not a folder that exists"
@@ -376,12 +399,12 @@ gpa () {
 gtd() {
     echo -ne "  ╚ ${WHITE}Go to dev folder (Y/n)? ${RESET}" 
     read -n 1 -r toDev
-    echo -en "\e[1A"
+    echo -en "${UPONE}"
     if [[ $toDev =~ [Yy] ]] || [[ -z $toDev ]]; then
-        echo -e "\e[0K  ╠ ${GREEN}Go to dev folder (${BOLD}Y${RESET}${GREEN}/n)? ${RESET}"
+        echo -e "  ╠ ${GREEN}Go to dev folder (${BOLD}Y${RESET}${GREEN}/n)? ${RESET}"
         dev
     else
-        echo -e "\e[0K  ╠ ${RED}Go to dev folder (Y/${BOLD}n${RESET}${RED})? ${RESET}"
+        echo -e "  ╠ ${RED}Go to dev folder (Y/${BOLD}n${RESET}${RED})? ${RESET}"
     fi
 }
 
@@ -402,58 +425,73 @@ function blinkInPlace() {
 }
 
 function blinkTwoLines() {
-    local LINE1=$1 LINE2=$2 SPD=$3
+    local LINE1=$1 LINE2=$2 SPD=$3 OVERLINE
+    OVERLINE=$(printf ' %.0s' $(seq 1 ${#LINE2}))
 
     echo -e   "$LINE1"
     echo -en  "$LINE2"
     sleep "$SPD"
-    echo -en "\r\e[1A"
+    echo -en "${UPONE}"
 
-    echo -e   "\r\e[0K"
-    echo -en  "\r\e[0K "
+    echo -e   "${CLEAR}"
+    echo -en  "${CLEAR}$OVERLINE"
     sleep "$(echo "$SPD"/2 | bc -l)"
-    echo -en "\r\e[1A"
+    echo -en "${UPONE}"
+}
+
+function writeOut() {
+    local LINE=$1 SPD=$2
+    for i in $(seq 1 ${#LINE}); do
+        printf "%s" "${LINE:i-1:1}"
+        sleep "$SPD"
+    done
+}
+
+function writeNameLine() {
+    local LINE1=$1 LINE2=$2 SPD=$3
+    echo     "$LINE1"
+    echo -en "$LINE2${PINK}"
+    writeOut "$USER" "$SPD"
+    echo -en "${UPONE}${RESET}"
+    echo -e  "${CLEAR}"
+    echo -en "${CLEAR}"
+    echo -en "${UPONE}"
 }
 
 if [[ -z $BPRSOURCED ]]; then
-    LINE1="Hello ${PINK}${USER}${RESET}"
+    greetings=( "Hello" "Howdy" "Welcome" )
+    timenow=$(date "+%H")
+    if [[ $timenow -lt 12 ]]; then
+        GREETING="Good Morning,"
+    elif [[ $timenow -gt 16 ]]; then
+        GREETING="It's after hours. Go home,"
+    else
+        rand=$((RANDOM % ${#greetings[@]}))
+        GREETING=${greetings[$rand]}
+    fi
+    LINE1="${GREETING} ${PINK}${USER}${RESET}"
     LINE2="Dev Folder is ${BLUE}"
     LINESPEED=0.04
     echo -e  "╞═╦╣ "
     echo -en "╰ ╚═ "
-    echo -en "\e[2A"
+    echo -en "${UPTWO:2}"
     echo -en "${WHITE}"
-    for i in $(seq 1 ${#LINE1}); do
-        printf "%s" "${LINE1:i-1:1}"
-        sleep $LINESPEED
-    done
+    writeOut "$LINE1" $LINESPEED
     echo -en "${RESET}\n╰ ╚═ ${WHITE}"
-    for i in $(seq 1 ${#LINE2}); do
-        printf "%s" "${LINE2:i-1:1}"
-        sleep $LINESPEED
-    done
-    blinkInPlace "${DEV_FOLDER}" 0.3 2
-    sleep 1
-    echo -e "\e[1A╰ ╠" 
+    writeOut "$LINE2" $LINESPEED
+    blinkInPlace "${DEV_FOLDER}" 0.4 1
+    echo -en "    "
+    sleep 0.2
+    echo -e "${UPONE}╰ ╠" 
 
     gpa
-    gtd
+    # gtd
 
-    function printOpen {
-        echo -e   "╒═╣"
-        echo -en  "╞"
-        sleep "$1"
-        echo -en "\r\e[1A"
-    }
+    LINE1="╒═╣" 
+    LINE2="╰ "
 
-    function printClear {
-        echo -e   "\r\e[0K"
-        echo -en  "\r\e[0K "
-        sleep "$1"
-        echo -en "\r\e[1A"
-    }
-
-    blinkTwoLines "╒═╣" "╰" 0.4
-    blinkTwoLines "╒═╣" "╰" 0.6
+    blinkTwoLines "$LINE1" "$LINE2" 0.4
+    blinkTwoLines "$LINE1" "$LINE2" 0.6
+    writeNameLine "$LINE1" "$LINE2" $LINESPEED
 
 fi

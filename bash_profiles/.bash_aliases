@@ -1,5 +1,6 @@
 alias ebr="vim ~/.bashrc"
 alias ebp="vim ~/.bash_profile"
+alias eba="vim ~/.bash_aliases"
 alias sbp="source ~/.bash_profile"
 alias evr="vim ~/.vimrc"
 alias evc="vim ~/.vim_runtime/config.vim"
@@ -17,7 +18,7 @@ alias path='echo $PATH | tr -s ":" "\n"'
 alias setclip='xclip -selection clipboard'
 alias getclip='setclip -o'
 
-alias cd='unset PROMPTSOURCED && cd'
+alias cd='unset PROMPTSOURCED && >/dev/null cd'
 alias dev='cd $DEV_FOLDER'
 alias ldev='ll $DEV_FOLDER'
 alias pdev='pushd $DEV_FOLDER'
