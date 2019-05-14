@@ -2,29 +2,99 @@
 
 stty -ixon
 
+export JWIZ_RC_VERSION=0.2.2
+
 [[ -f /etc/bashrc ]] && . /etc/bashrc
-
-if [[ -f ~/.bash_settings ]]; then
-    . ~/.bash_settings
-else
-    echo "====="
-    echo "Initial settings options"
-    echo "====="
-    read -p "What is your development folder (~/Development)? " -r DEV_FOLDER
-    read -p "What is your difftool (p4merge)? " -r DIFF_TOOL
-    read -p "What is your email address? " -r USER_EMAIL
-    echo "Your editor is vim. Fuck you."
-    cat > ~/.bash_settings <<- EOS
-export DEV_FOLDER=${DEV_FOLDER:-~/Development}
-export DIFF_TOOL=${DIFF_TOOL:-p4merge}
-export USER_EMAIL=${USER_EMAIL}
-EOS
-    . ~/.bash_settings
-fi
-
 [[ -f ~/.tfvarsrc ]] && . ~/.tfvarsrc
 
-get_colors() {
+jwizbash_config() {
+    reset
+    USER_NAME="${JWIZ_USER_NAME:-$USER}"
+    USER_EMAIL="${USER_EMAIL:-""}"
+    DEV_FOLDER="${DEV_FOLDER:-"~/Development"}"
+    DIFF_TOOL="${DIFF_TOOL:-"p4merge"}"
+    DEV_FOLDER="${DEV_FOLDER:-"~/Development"}"
+    CONFIG_MODE=${1:-"JWiz Bash"}
+    echo $USER_EMAIL
+    echo "====="
+    echo "${CONFIG_MODE} Config Options"
+    if [[ $CONFIG_MODE == "Upgrade" ]]; then
+        echo "Version $JWIZ_SETTINGS_VERSION -> $JWIZ_RC_VERSION"
+    elif [[ $CONFIG_MODE == "Initial" ]]; then
+        echo "Welcome :)"
+    fi
+    echo "====="
+    read -p "Hi! What should I call you ($USER_NAME)" -r USER_NAME_REPLY
+    USER_NAME=${USER_NAME_REPLY:-$USER_NAME}
+    read -p "What is your development folder ($DEV_FOLDER)? " -r DEV_FOLDER_REPLY
+    DEV_FOLDER=${DEV_FOLDER_REPLY:-$DEV_FOLDER}
+    read -p "What is your difftool ($DIFF_TOOL)? " -r DIFF_TOOL_REPLY
+    DIFF_TOOL=${DIFF_TOOL_REPLY:-$DIFF_TOOL}
+    read -p "What is your email address for git$(if [[ $USER_EMAIL ]]; then printf " (%s)" "${USER_EMAIL}"; fi)? " -r USER_EMAIL_REPLY
+    USER_EMAIL=${USER_EMAIL_REPLY:-$USER_EMAIL}
+    PS3="Choose a color for your username: "
+    select color in RED GREEN YELLOW BLUE WHITE PINK; do
+        USER_COLOR=$color
+        break
+    done
+    PS3="Choose a prompt icon: "
+    select icon in $ ⪢ ⧽ ⟫ ⯈ ⛥ ⨎ ‽ ☭; do
+        USER_ICON=$icon
+        break
+    done
+    echo "=== Startup options"
+    read -p "Show splash screen (Y/n)? " -n 1 -r
+    case $REPLY in 
+        [Nn]  ) SPLASH_SCREEN=false ;;
+        [Yy]|*) SPLASH_SCREEN=true  ;;
+    esac
+    if [[ $REPLY ]]; then echo; fi
+    read -p "Ask to git pull dev folder (Y/n)? " -n 1 -r
+    case $REPLY in 
+        [Nn]  ) PULL_DEV=false ;;
+        [Yy]|*) PULL_DEV=true  ;;
+    esac
+    if [[ $REPLY ]]; then echo; fi
+    read -p "Ask to cd to dev folder (y/N)? " -n 1 -r
+    case $REPLY in 
+        [Yy]  ) GTD=true  ;;
+        [Nn]|*) GTD=false ;;
+    esac
+    if [[ $REPLY ]]; then echo; fi
+    echo "Your editor is vim. Fuck you."
+    cat > ~/.bash_settings <<- EOS
+JWIZ_SETTINGS_VERSION="${JWIZ_RC_VERSION}"
+DEV_FOLDER=${DEV_FOLDER:-~/Development}
+DIFF_TOOL="${DIFF_TOOL:-p4merge}"
+USER_EMAIL=${USER_EMAIL}
+
+JWIZ_PULL_DEV=${PULL_DEV}
+JWIZ_GTD=${GTD}
+JWIZ_SPLASH_SCREEN=${SPLASH_SCREEN}
+JWIZ_ANIMATE=true
+JWIZ_USER_NAME="${USER_NAME}"
+JWIZ_USER_COLOR="${USER_COLOR}"
+JWIZ_USER_ICON="${USER_ICON}"
+EOS
+    . ~/.bash_settings
+    sleep 2
+    reset
+}
+
+loadOrRunSettings() {
+    if [[ -f ~/.bash_settings ]]; then 
+        . ~/.bash_settings
+        if [[ "${JWIZ_SETTINGS_VERSION}" != "${JWIZ_RC_VERSION}" ]]; then
+            jwizbash_config Upgrade
+        fi
+    else
+        jwizbash_config Initial
+    fi
+}
+
+loadOrRunSettings
+
+get_all_colors() {
     color(){
         for c; do
             printf '\e[48;5;%dm%03d' "$c" "$c"
@@ -40,17 +110,18 @@ get_colors() {
     color {232..255}
 }
 
-RED=$(tput setaf 1)
-GREEN=$(tput setaf 34)
-YELLOW=$(tput setaf 226)
-BLUE=$(tput setaf 44)
-WHITE=$(tput setaf 7)
-PINK=$(tput setaf 200)
-RESET=$(tput sgr0)
-BOLD=$(tput bold)
-CLEAR="\r\e[0K"
-UPONE="\r\e[1A"
-UPTWO="\r\e[2A"
+declare -A COLORS
+COLORS[RED]=$(tput setaf 1)
+COLORS[GREEN]=$(tput setaf 34)
+COLORS[YELLOW]=$(tput setaf 226)
+COLORS[BLUE]=$(tput setaf 44)
+COLORS[WHITE]=$(tput setaf 7)
+COLORS[PINK]=$(tput setaf 200)
+COLORS[RESET]=$(tput sgr0)
+COLORS[BOLD]=$(tput bold)
+COLORS[CLEAR]="\r\e[0K"
+COLORS[UPONE]="\r\e[1A"
+COLORS[UPTWO]="\r\e[2A"
 
 
 function git_color {
@@ -58,13 +129,13 @@ function git_color {
     git_status="$(git status 2> /dev/null)"
 
     if [[ ! $git_status =~ "working tree clean" ]]; then
-        echo "$RED"
+        echo "${COLORS[RED]}"
     elif [[ $git_status =~ "Your branch is ahead of" ]]; then
-        echo "$YELLOW"
+        echo "${COLORS[YELLOW]}"
     elif [[ $git_status =~ "nothing to commit" ]]; then
-        echo "$GREEN"
+        echo "${COLORS[GREEN]}"
     else
-        echo "$BLUE"
+        echo "${COLORS[BLUE]}"
     fi
 }
 
@@ -77,7 +148,7 @@ function run_pull_check {
     git_remote="$(git remote show "$remote_for_branch" 2> /dev/null)"
     branch_status="${current_branch} pushes to .+local out of date"
     if [[ $git_remote =~ $branch_status ]]; then
-        echo -e "${UPONE}│\n│ $(basename "$(pwd)")'s $current_branch branch has new data from $remote_for_branch"
+        echo -e "${COLORS[UPONE]}│\n│ $(basename "$(pwd)")'s $current_branch branch has new data from $remote_for_branch"
         echo -n "╰ Git pull (y/N)? " 
         read -r GIT_PULL
         if [[ $GIT_PULL =~ [Yy] ]]; then
@@ -114,13 +185,13 @@ get_work_dir() {
         elif [[ "$(basename "$ABOVEFOLDER")" == "terraform" ]]; then
             case $CURRENTFOLDER in
                 *"dev"*)
-                    CURRENTFOLDER="$BLUE$CURRENTFOLDER$WHITE"
+                    CURRENTFOLDER="${COLORS[BLUE]}$CURRENTFOLDER${COLORS[WHITE]}"
                     ;;
                 *"stage"*)
-                    CURRENTFOLDER="$YELLOW$CURRENTFOLDER$WHITE"
+                    CURRENTFOLDER="${COLORS[YELLOW]}$CURRENTFOLDER${COLORS[WHITE]}"
                     ;;
                 *"prod"*)
-                    CURRENTFOLDER="$RED$BOLD$CURRENTFOLDER$WHITE"
+                    CURRENTFOLDER="${COLORS[RED]}$BOLD$CURRENTFOLDER${COLORS[WHITE]}"
                     ;;
             esac
             echo "TF ($CURRENTFOLDER): $(basename "$THREEUP")"
@@ -131,22 +202,22 @@ get_work_dir() {
 }
 
 function create_prompt {
-    tput civis
     RETURN_VAL=$?
+    tput civis
     local PROMPT INFO_LINE CD_LINE INFO_DIR
     if [[ "$(pwd)" =~ "terraform" ]]; then
         INFO_DIR="\$(get_work_dir)"
     else
         INFO_DIR="\w"
     fi
-    CD_LINE="╒═╣\[$WHITE\] \d \A \[$RESET\]╞═╣\[$WHITE\] \[${INFO_DIR}\] \[$RESET\]╞══╕\n"
-    INFO_LINE="╒═╣\[$WHITE\] \[\$(get_work_dir)\] \[$RESET\]╞══╕\n"
+    CD_LINE="╒═╣\[${COLORS[WHITE]}\] \d \A \[${COLORS[RESET]}\]╞═╣\[${COLORS[WHITE]}\] \[${INFO_DIR}\] \[${COLORS[RESET]}\]╞══╕\n"
+    INFO_LINE="╒═╣\[${COLORS[WHITE]}\] \[\$(get_work_dir)\] \[${COLORS[RESET]}\]╞══╕\n"
     if [[ $RETURN_VAL -eq 0 ]]; then
-        RETURN_COLOR=$GREEN
+        RETURN_COLOR=${COLORS[GREEN]}
     else
-        RETURN_COLOR=$RED
+        RETURN_COLOR=${COLORS[RED]}
     fi
-    PROMPT="╰\[$PINK\] \u \[\$(git_color)\]\$(git_display)\[$RETURN_COLOR\]$PROMPT_SYMBOL\[$RESET\] "
+    PROMPT="╰\[${COLORS["$JWIZ_USER_COLOR"]}\] \u \[\$(git_color)\]\$(git_display)\[$RETURN_COLOR\]$JWIZ_USER_ICON\[${COLORS[RESET]}\] "
 
     if [[ $PROMPTSOURCED ]]; then
         PS1="$INFO_LINE$PROMPT"
@@ -160,9 +231,8 @@ function create_prompt {
     tput cnorm
 }
 
-PROMPT_SYMBOL="⪢"
 PROMPT_COMMAND=create_prompt
-PS2="${UPONE}│\n╰ "
+PS2="${COLORS[UPONE]}│\n╰ "
 PS4="${0} Line:${LINENO}+- "
 
 # vimx for when you can't build clipboard support from source
@@ -178,7 +248,7 @@ bind '"\C-e": edit-and-execute-command'
 
 [[ -f ~/.bash_aliases ]] && . ~/.bash_aliases
 
-testsh () {
+touchsh () {
     touch "$1"
     chmod +x "$1"
     vim "$1"
@@ -350,18 +420,18 @@ for dir in "${LOCAL_PATH[@]}"; do
 done
 
 export PATH
-export CDPATH='.:~:~/Development'
+export CDPATH=".:~:${DEV_FOLDER}"
 
-export TFPROMOTE_DIFFTOOL=$DIFF_TOOL
+export TFPROMOTE_DIFFTOOL=${DIFF_TOOL}
 
 gpa () {
-    if [[ -d $DEV_FOLDER ]]; then
-        echo -ne "  ╚ ${WHITE}Git pull projects in dev folder (y/N)? ${RESET}"
+    if [[ -d ${DEV_FOLDER} ]]; then
+        echo -ne "  ╚ ${COLORS[WHITE]}Git pull projects in dev folder (y/N)? ${COLORS[RESET]}"
         read -n 1 -r pull
         if [[ $pull =~ [Yy] ]]; then
-            echo -e  "${CLEAR}  ╠ ${GREEN}Git pull projects in dev folder (${BOLD}y${RESET}${GREEN}/N)? ${RESET}"
+            echo -e  "${COLORS[CLEAR]}  ╠ ${COLORS[GREEN]}Git pull projects in dev folder (${COLORS[BOLD]}y${COLORS[RESET]}${COLORS[GREEN]}/N)? ${COLORS[RESET]}"
             echo "  ╨ Pulling all development repos. Please wait."
-            pushd "$DEV_FOLDER" > /dev/null || return
+            pushd "${DEV_FOLDER}" > /dev/null || return
             count=0
             # For folder in $DEV_FOLDER
             for D in */; do
@@ -370,7 +440,7 @@ gpa () {
                     # Start pulling
                     (( count++ ))
                     # No new line in yellow \xE2\x98\x90 = ☐
-                    echo -en "${YELLOW}☐ Pulling ${D%?}"
+                    echo -en "${COLORS[YELLOW]}☐ Pulling ${D%?}"
                     # This block is strictly to surpress output
                     {
                         pushd "${D}" || return
@@ -378,20 +448,24 @@ gpa () {
                         PULLSTATUS=$?
                         popd || return
                     } &> /dev/null
-                    if [ $PULLSTATUS -eq 0 ]; then
+                    if [ ${PULLSTATUS} -eq 0 ]; then
                         # All good? Overwrite the line in green! \xE2\x98\x91 = ☑
-                        echo -e "${CLEAR}${GREEN}☑ Pulled ${D%?}!"
+                        echo -e "${COLORS[CLEAR]}${COLORS[GREEN]}☑ Pulled ${D%?}!"
                     else
                         # Problem? Overwrite the line in red. \xE2\x98\x91 = ☒
-                        echo -e "${CLEAR}${RED}☒ Pull failed for ${D%?}!"
+                        echo -e "${COLORS[CLEAR]}${COLORS[RED]}☒ Pull failed for ${D%?}!"
                     fi
                 fi
             done
             popd > /dev/null || return
-            echo -e "${GREEN}Processed $count${RESET}"
+            echo -e "${COLORS[GREEN]}Processed $count${COLORS[RESET]}"
         else
-            echo -en "${UPONE}"
-            echo -e  "  ╠ ${RED}Git pull projects in dev folder (y/${BOLD}N${RESET}${RED})? ${RESET}"
+            if [[ -z $pull ]]; then
+                echo -en "${COLORS[UPONE]}"
+            else
+                echo -en "${COLORS[CLEAR]}"
+            fi
+            echo -e  "  ╠ ${COLORS[RED]}Git pull projects in dev folder (y/${COLORS[BOLD]}N${COLORS[RESET]}${COLORS[RED]})? ${COLORS[RESET]}"
         fi
     else
         echo "${DEV_FOLDER:-\$DEV_FOLDER} is not a folder that exists"
@@ -399,14 +473,18 @@ gpa () {
 } 
 
 gtd() {
-    echo -ne "  ╚ ${WHITE}Go to dev folder (Y/n)? ${RESET}" 
+    echo -ne "  ╚ ${COLORS[WHITE]}Go to dev folder (Y/n)? ${COLORS[RESET]}" 
     read -n 1 -r toDev
-    echo -en "${UPONE}"
-    if [[ $toDev =~ [Yy] ]] || [[ -z $toDev ]]; then
-        echo -e "  ╠ ${GREEN}Go to dev folder (${BOLD}Y${RESET}${GREEN}/n)? ${RESET}"
+    if [[ ${toDev} =~ [Yy] ]] || [[ -z ${toDev} ]]; then
+        if [[ -z ${toDev} ]]; then
+            echo -en "${COLORS[UPONE]}"
+        else
+            echo -en "${COLORS[CLEAR]}"
+        fi
+        echo -e "  ╠ ${COLORS[GREEN]}Go to dev folder (${COLORS[BOLD]}Y${COLORS[RESET]}${COLORS[GREEN]}/n)? ${COLORS[RESET]}"
         dev
     else
-        echo -e "  ╠ ${RED}Go to dev folder (Y/${BOLD}n${RESET}${RED})? ${RESET}"
+        echo -e "  ╠ ${COLORS[RED]}Go to dev folder (Y/${COLORS[BOLD]}n${COLORS[RESET]}${COLORS[RED]})? ${COLORS[RESET]}"
     fi
 }
 
@@ -423,7 +501,7 @@ function blinkInPlace() {
         sleep "$SPD"
         printf "%s%s" "${BACKSP}" "${MSG}"
     done
-    printf "%s\n" "${RESET}"
+    printf "%s\n" "${COLORS[RESET]}"
 }
 
 function blinkTwoLines() {
@@ -433,12 +511,12 @@ function blinkTwoLines() {
     echo -e   "$LINE1"
     echo -en  "$LINE2"
     sleep "$SPD"
-    echo -en "${UPONE}"
+    echo -en "${COLORS[UPONE]}"
 
-    echo -e   "${CLEAR}"
-    echo -en  "${CLEAR}$OVERLINE"
+    echo -e   "${COLORS[CLEAR]}"
+    echo -en  "${COLORS[CLEAR]}$OVERLINE"
     sleep "$(echo "$SPD"/2 | bc -l)"
-    echo -en "${UPONE}"
+    echo -en "${COLORS[UPONE]}"
 }
 
 function writeOut() {
@@ -455,54 +533,84 @@ function writeNameDate() {
     current_dirs=$(dirs)
     [[ ${#current_dirs} -gt ${#current_date} ]] && long_str=${#current_dirs} || long_str=${#current_date}
     echo -e  "$LINE1"
-    echo -en "$LINE2${UPONE}"
+    echo -en "$LINE2${COLORS[UPONE]}"
     for i in $(seq 1 "$long_str"); do
-        echo -en "${CLEAR}$LINE1 ${WHITE}${current_date:0:i}${RESET} $LINE1A ${WHITE}${current_dirs:0:i}${RESET} $LINE1B"
+        echo -en "${COLORS[CLEAR]}$LINE1 ${COLORS[WHITE]}${current_date:0:i}${COLORS[RESET]} $LINE1A ${COLORS[WHITE]}${current_dirs:0:i}${COLORS[RESET]} $LINE1B"
         sleep "$SPD"
     done
-    echo -en "\n${CLEAR}$LINE2${PINK}"
+    echo -en "\n${COLORS[CLEAR]}$LINE2${COLORS["$JWIZ_USER_COLOR"]}"
     writeOut "$USER" "$SPD"
     tput civis
-    echo -en "${UPONE}${RESET}"
-    # echo -e  "${CLEAR}"
-    # echo -en "${CLEAR}"
-    # echo -en "${UPONE}"
+    echo -en "${COLORS[UPONE]}${COLORS[RESET]}"
+    # echo -e  "${COLORS[CLEAR]}"
+    # echo -en "${COLORS[CLEAR]}"
+    # echo -en "${COLORS[UPONE]}"
 }
 
-writeDateLine() {
-    local LINE1=$1 LINE2=
-    
+drawSplash() {
+    local LINE1=$1 SPD=$2 WIDTH HEIGHT LENGTH
+    WIDTH=$(tput cols)
+    HEIGHT=$(tput lines)
+    LENGTH=${#LINE1}
+    clear
+    BLOCK="█"
+    for i in $(seq 1 "$LENGTH"); do
+        tput cup $((HEIGHT / 2)) $(((WIDTH / 2) - (i / 2 + 1)))
+        printf "%s" "${LINE1:0:i}"
+        sleep "$SPD"
+    done
+    blinkInPlace "$BLOCK" 0.4 3
+}
+
+hideinput() {
+  if [ -t 0 ]; then
+     stty -echo -icanon time 0 min 0
+  fi
+}
+
+cleanup() {
+  if [ -t 0 ]; then
+    stty sane
+  fi
 }
 
 if [[ -z $BPRSOURCED ]]; then
+    hideinput
+    LINESPEED=0.04
+    if [[ $JWIZ_SPLASH_SCREEN == "true" ]]; then
+        SPLASH_STRING="I didn't think this through."
+        tput civis
+        drawSplash "$SPLASH_STRING" "$LINESPEED"
+        reset
+        tput cnorm
+    fi
     greetings=( "Hello" "Howdy" "Welcome" )
-    timenow=$(date "+%H")
-    if [[ $timenow -lt 12 ]]; then
+    timenow=$(date +%s)
+    if [[ $timenow -lt $(date --date="12:00" +%s) ]]; then
         GREETING="Good Morning,"
-    elif [[ $timenow -gt 16 ]]; then
+    elif [[ $timenow -gt $(date --date="17:00" +%s) ]]; then
         GREETING="It's after hours. Go home,"
     else
         rand=$((RANDOM % ${#greetings[@]}))
         GREETING=${greetings[$rand]}
     fi
-    LINE1="${GREETING} ${PINK}${USER}${RESET}"
-    LINE2="Dev Folder is ${BLUE}"
-    LINESPEED=0.04
+    LINE1="${GREETING} ${COLORS["$JWIZ_USER_COLOR"]}${JWIZ_USER_NAME}${COLORS[RESET]}"
+    LINE2="Dev Folder is ${COLORS[BLUE]}"
     echo -e  "╞═╦╣ "
     echo -en "╰ ╚═ "
-    echo -en "${UPTWO:2}"
-    echo -en "${WHITE}"
+    echo -en "${COLORS[UPTWO]:2}"
+    echo -en "${COLORS[WHITE]}"
     writeOut "$LINE1" $LINESPEED
-    echo -en "${RESET}\n╰ ╚═ ${WHITE}"
+    echo -en "${COLORS[RESET]}\n╰ ╚═ ${COLORS[WHITE]}"
     writeOut "$LINE2" $LINESPEED
     blinkInPlace "${DEV_FOLDER}" 0.4 1
     echo -en "    "
     sleep 0.2
-    echo -e "${UPONE}╰ ╠" 
-
-    gpa
-    gtd
-
+    echo -e "${COLORS[UPONE]}╰ ╠" 
+    cleanup
+    $JWIZ_PULL_DEV && gpa
+    $JWIZ_GTD      && gtd
+    hideinput
     LINE1="╒═╣" 
     LINE1A="╞═╣"
     LINE1B="╞══╕"
@@ -513,5 +621,5 @@ if [[ -z $BPRSOURCED ]]; then
     writeNameDate "$LINE1" "$LINE2" "$LINE1A" "$LINE1B" $LINESPEED
 
     tput cnorm
-
+    cleanup
 fi
