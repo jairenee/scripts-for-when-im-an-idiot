@@ -24,7 +24,7 @@ jwizbash_config() {
         echo "Welcome :)"
     fi
     echo "====="
-    read -p "Hi! What should I call you ($USER_NAME)" -r USER_NAME_REPLY
+    read -p "Hi! What should I call you ($USER_NAME)? " -r USER_NAME_REPLY
     USER_NAME=${USER_NAME_REPLY:-$USER_NAME}
     read -p "What is your development folder ($DEV_FOLDER)? " -r DEV_FOLDER_REPLY
     DEV_FOLDER=${DEV_FOLDER_REPLY:-$DEV_FOLDER}
@@ -111,11 +111,11 @@ get_all_colors() {
 }
 
 declare -A COLORS
-COLORS[RED]=$(tput setaf 1)
+COLORS[RED]=$(tput setaf 160)
 COLORS[GREEN]=$(tput setaf 34)
 COLORS[YELLOW]=$(tput setaf 226)
 COLORS[BLUE]=$(tput setaf 44)
-COLORS[WHITE]=$(tput setaf 7)
+COLORS[WHITE]=$(tput setaf 15)
 COLORS[PINK]=$(tput setaf 200)
 COLORS[RESET]=$(tput sgr0)
 COLORS[BOLD]=$(tput bold)
